@@ -1,0 +1,2263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroRehab App | Suite Clínica e Intervención Integral</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para gráfico radar basal -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        petrol: { DEFAULT: '#0F4C5C', light: '#1A6B80', dark: '#09313B' },
+                        sage: { DEFAULT: '#2A9D8F', light: '#48B5A8', dark: '#1E7368' },
+                        healthbg: '#F4F7F8'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --font-scale: 1;
+        }
+        html {
+            font-size: calc(16px * var(--font-scale));
+        }
+        body {
+            background-color: #F4F7F8;
+            color: #1E293B;
+            overflow-x: hidden;
+        }
+        .btn-touch {
+            min-height: 52px;
+            transition: transform 0.1s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+        .btn-touch:active {
+            transform: scale(0.98);
+        }
+        .vista-spa {
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }
+        .vista-spa.activa {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Escala de fuente accesible */
+        body.scale-a1 { --font-scale: 1; }
+        body.scale-a2 { --font-scale: 1.125; }
+        body.scale-a3 { --font-scale: 1.25; }
+    </style>
+</head>
+<body class="scale-a1 min-h-screen flex flex-col">
+
+    <!-- BARRA SUPERIOR GLOBAL DE ACCESIBILIDAD Y CONTEXTO -->
+    <header id="global-header" class="bg-petrol text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-sage flex items-center justify-center shadow-inner">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">NeuroRehab App</h1>
+                    <p id="header-subtitulo" class="text-xs text-teal-100">Plataforma de Neurorrehabilitación Integral</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Badge de Rol Activo -->
+                <span id="badge-rol-activo" class="hidden px-3 py-1.5 rounded-full text-xs font-semibold bg-white/15 border border-white/25">
+                    Rol: Invitado
+                </span>
+                <!-- Selector de Escala Tipográfica A / A+ / A++ -->
+                <div class="flex items-center bg-petrol-dark/60 p-1 rounded-xl border border-white/15" role="group" aria-label="Tamaño de letra">
+                    <button type="button" onclick="setFontScale('scale-a1', this)" class="font-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-sage text-white">A</button>
+                    <button type="button" onclick="setFontScale('scale-a2', this)" class="font-btn px-2.5 py-1 rounded-lg text-sm font-bold text-teal-100 hover:text-white">A+</button>
+                    <button type="button" onclick="setFontScale('scale-a3', this)" class="font-btn px-2.5 py-1 rounded-lg text-base font-bold text-teal-100 hover:text-white">A++</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- TOAST / BANNER DE NOTIFICACIONES (SIN ALERT) -->
+    <div id="global-toast" class="fixed bottom-5 right-5 z-50 hidden max-w-sm bg-slate-900 text-white px-5 py-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3">
+        <span id="global-toast-icon" class="w-3 h-3 rounded-full bg-sage shrink-0"></span>
+        <p id="global-toast-msg" class="text-sm font-medium"></p>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL SPA -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- =====================================================================
+             1. VISTA BIENVENIDA / CONTROL DE ROLES
+        ====================================================================== -->
+        <section id="vista-bienvenida" class="vista-spa activa">
+            <div class="max-w-4xl mx-auto mt-4">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-10 text-center mb-8">
+                    <span class="inline-block px-4 py-1.5 rounded-full bg-teal-50 text-petrol font-semibold text-xs uppercase tracking-wider mb-3">
+                        Arquitectura Clínica HealthTech
+                    </span>
+                    <h2 class="text-2xl md:text-4xl font-extrabold text-slate-900 mb-3">
+                        Bienvenido a NeuroRehab App
+                    </h2>
+                    <p class="text-slate-600 max-w-2xl mx-auto text-base md:text-lg">
+                        Seleccione su perfil de acceso para iniciar la evaluación neurofuncional basal o continuar con su plan de rehabilitación personalizada.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Tarjeta Acceso Paciente -->
+                    <div class="bg-white rounded-3xl shadow-sm border-2 border-slate-200 hover:border-sage p-6 md:p-8 flex flex-col justify-between transition">
+                        <div>
+                            <div class="w-14 h-14 rounded-2xl bg-teal-50 text-sage flex items-center justify-center mb-5">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Portal del Paciente</h3>
+                            <p class="text-slate-600 mb-6">
+                                Interfaz guiada de alta accesibilidad para realizar tus evaluaciones y sesiones diarias de terapia cognitiva, motora y de lenguaje.
+                            </p>
+                        </div>
+                        <button type="button" onclick="iniciarComoPaciente(false)" class="btn-touch w-full rounded-2xl bg-sage hover:bg-sage-dark text-white font-bold text-lg shadow-md flex items-center justify-center gap-2">
+                            <span>Ingresar como Paciente</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Tarjeta Acceso Clínico con Teclado PIN -->
+                    <div class="bg-white rounded-3xl shadow-sm border-2 border-slate-200 hover:border-petrol p-6 md:p-8 flex flex-col justify-between transition">
+                        <div>
+                            <div class="w-14 h-14 rounded-2xl bg-cyan-50 text-petrol flex items-center justify-center mb-5">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Modo Clínico / Terapeuta</h3>
+                            <p class="text-slate-600 mb-4">
+                                Acceso al Centro de Evaluación Basal, configuración de rutas terapéuticas, analítica radar y exportación de informes clínicos.
+                            </p>
+
+                            <!-- Teclado PIN de 4 dígitos -->
+                            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                                <label class="block text-xs font-bold uppercase text-slate-500 text-center mb-2">Ingrese PIN Clínico (4 dígitos)</label>
+                                <div class="flex justify-center gap-3 mb-3" id="pin-dots">
+                                    <span class="w-4 h-4 rounded-full border-2 border-petrol bg-white"></span>
+                                    <span class="w-4 h-4 rounded-full border-2 border-petrol bg-white"></span>
+                                    <span class="w-4 h-4 rounded-full border-2 border-petrol bg-white"></span>
+                                    <span class="w-4 h-4 rounded-full border-2 border-petrol bg-white"></span>
+                                </div>
+                                <p id="pin-error-msg" class="text-center text-xs font-semibold text-rose-600 h-4 mb-2"></p>
+                                <div class="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                                    <button type="button" onclick="pinDigito('1')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">1</button>
+                                    <button type="button" onclick="pinDigito('2')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">2</button>
+                                    <button type="button" onclick="pinDigito('3')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">3</button>
+                                    <button type="button" onclick="pinDigito('4')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">4</button>
+                                    <button type="button" onclick="pinDigito('5')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">5</button>
+                                    <button type="button" onclick="pinDigito('6')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">6</button>
+                                    <button type="button" onclick="pinDigito('7')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">7</button>
+                                    <button type="button" onclick="pinDigito('8')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">8</button>
+                                    <button type="button" onclick="pinDigito('9')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">9</button>
+                                    <button type="button" onclick="pinLimpiar()" class="btn-touch rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-bold text-sm hover:bg-rose-100">Borrar</button>
+                                    <button type="button" onclick="pinDigito('0')" class="btn-touch rounded-xl bg-white border border-slate-300 font-bold text-lg hover:bg-slate-100">0</button>
+                                    <button type="button" onclick="pinValidar()" class="btn-touch rounded-xl bg-petrol text-white font-bold text-sm hover:bg-petrol-dark">Entrar</button>
+                                </div>
+                                <p class="text-[11px] text-slate-400 text-center mt-2">PIN predeterminado: 1234</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             2. VISTA PANEL CLÍNICO (PREFIJO cli_)
+        ====================================================================== -->
+        <section id="vista-panel-clinico" class="vista-spa">
+            <!-- Barra de acciones rápidas del clínico -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-5 mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-petrol">Estación de Control Clínico</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Centro de Evaluación Basal y Gestión Terapéutica</h2>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" onclick="cli_copiarEnlacePaciente()" class="btn-touch px-4 py-2.5 rounded-2xl bg-teal-50 hover:bg-teal-100 text-petrol border border-teal-200 font-semibold text-sm flex items-center gap-2">
+                        <svg class="w-5 h-5 text-sage" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                        <span>Copiar Enlace para Paciente</span>
+                    </button>
+                    <button type="button" onclick="cli_bloquearSesion()" class="btn-touch px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm flex items-center gap-2 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <span>Bloquear Sesión Clínica</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Configuración de Ruta del Paciente y Seguridad PIN -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-1">Ruta de Inicio del Paciente</h3>
+                    <p class="text-sm text-slate-500 mb-4">Define el flujo obligatorio o sugerido cuando el paciente ingresa desde su portal o enlace dedicado.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3" id="cli-rutas-container">
+                        <label class="cursor-pointer border-2 rounded-2xl p-4 flex flex-col justify-between transition" id="lbl-ruta-evaluacion_basal">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-sm text-petrol">1. Evaluación Basal</span>
+                                <input type="radio" name="cli_ruta" value="evaluacion_basal" onchange="cli_guardarRuta(this.value)" class="w-5 h-5 accent-petrol">
+                            </div>
+                            <p class="text-xs text-slate-600">Obliga a completar Cognitiva, Motora y Lenguaje (3/3) antes de desbloquear intervención.</p>
+                        </label>
+                        <label class="cursor-pointer border-2 rounded-2xl p-4 flex flex-col justify-between transition" id="lbl-ruta-intervencion_directa">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-sm text-petrol">2. Intervención Directa</span>
+                                <input type="radio" name="cli_ruta" value="intervencion_directa" onchange="cli_guardarRuta(this.value)" class="w-5 h-5 accent-petrol">
+                            </div>
+                            <p class="text-xs text-slate-600">Muestra directamente los módulos de ejercicios terapéuticos por área clínica.</p>
+                        </label>
+                        <label class="cursor-pointer border-2 rounded-2xl p-4 flex flex-col justify-between transition" id="lbl-ruta-acceso_libre">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-sm text-petrol">3. Acceso Libre</span>
+                                <input type="radio" name="cli_ruta" value="acceso_libre" onchange="cli_guardarRuta(this.value)" class="w-5 h-5 accent-petrol">
+                            </div>
+                            <p class="text-xs text-slate-600">Permite al paciente elegir libremente entre Evaluación Basal o Intervención.</p>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Gestión de PIN y Vista Previa Paciente -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-1">Seguridad PIN Clínico</h3>
+                        <p class="text-xs text-slate-500 mb-3">Actualice el código de 4 dígitos para proteger esta consola.</p>
+                        <div class="flex gap-2 mb-4">
+                            <input type="password" id="cli-nuevo-pin" maxlength="4" inputmode="numeric" placeholder="Nuevo PIN (4 díg.)" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold tracking-widest focus:outline-none focus:border-petrol">
+                            <button type="button" onclick="cli_actualizarPin()" class="btn-touch px-4 rounded-xl bg-petrol text-white font-semibold text-sm hover:bg-petrol-dark">Guardar</button>
+                        </div>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 flex flex-col gap-2">
+                        <button type="button" onclick="cli_previsualizarPortalPaciente()" class="btn-touch w-full rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm">
+                            Simular Vista Portal Paciente
+                        </button>
+                        <button type="button" onclick="cli_resetearEvaluaciones()" class="text-xs text-rose-600 hover:underline py-1 font-medium">
+                            Reiniciar datos basales de demostración
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjetas de Estado de Evaluación Basal + Acceso Directo a Módulos -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <!-- Card Cognitiva -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">Dominio Cognitivo</span>
+                            <span id="cli-badge-cog" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Pendiente</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-slate-900">MMSE / MoCA / FAB</h4>
+                        <p id="cli-resumen-cog" class="text-sm text-slate-600 mt-1 mb-4">Sin evaluación basal registrada.</p>
+                        <div class="w-full bg-slate-100 rounded-full h-3 mb-4 overflow-hidden">
+                            <div id="cli-bar-cog" class="bg-indigo-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="cambiarVista('vista-eval-cognitiva')" class="btn-touch rounded-xl bg-petrol hover:bg-petrol-dark text-white font-semibold text-xs px-3">
+                            Evaluar / Aplicar
+                        </button>
+                        <button type="button" onclick="int_abrirAreaDirecta('cognitiva')" class="btn-touch rounded-xl bg-teal-50 hover:bg-teal-100 text-petrol border border-teal-200 font-semibold text-xs px-3">
+                            Ir a Terapia
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card Motora -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">Dominio Motor</span>
+                            <span id="cli-badge-mot" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Pendiente</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-slate-900">Kapandji / Fugl-Meyer / ARAT</h4>
+                        <p id="cli-resumen-mot" class="text-sm text-slate-600 mt-1 mb-4">Sin evaluación basal registrada.</p>
+                        <div class="w-full bg-slate-100 rounded-full h-3 mb-4 overflow-hidden">
+                            <div id="cli-bar-mot" class="bg-sage h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="cambiarVista('vista-eval-motora')" class="btn-touch rounded-xl bg-petrol hover:bg-petrol-dark text-white font-semibold text-xs px-3">
+                            Evaluar / Aplicar
+                        </button>
+                        <button type="button" onclick="int_abrirAreaDirecta('motora')" class="btn-touch rounded-xl bg-teal-50 hover:bg-teal-100 text-petrol border border-teal-200 font-semibold text-xs px-3">
+                            Ir a Terapia
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card Lenguaje -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700">Dominio Lenguaje</span>
+                            <span id="cli-badge-len" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Pendiente</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-slate-900">Prueba Rápida Afasia (ART)</h4>
+                        <p id="cli-resumen-len" class="text-sm text-slate-600 mt-1 mb-4">Sin evaluación basal registrada.</p>
+                        <div class="w-full bg-slate-100 rounded-full h-3 mb-4 overflow-hidden">
+                            <div id="cli-bar-len" class="bg-sky-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="cambiarVista('vista-eval-lenguaje')" class="btn-touch rounded-xl bg-petrol hover:bg-petrol-dark text-white font-semibold text-xs px-3">
+                            Evaluar / Aplicar
+                        </button>
+                        <button type="button" onclick="int_abrirAreaDirecta('lenguaje')" class="btn-touch rounded-xl bg-teal-50 hover:bg-teal-100 text-petrol border border-teal-200 font-semibold text-xs px-3">
+                            Ir a Terapia
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analítica Radar + Tabla Comparativa Sub-escalas + Exportación CSV -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-5 bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center">
+                    <h3 class="text-lg font-bold text-slate-900 self-start mb-2">Perfil Neurofuncional Basal (0–100%)</h3>
+                    <p class="text-xs text-slate-500 self-start mb-4">Distribución porcentual normalizada por dominio clínico.</p>
+                    <div class="w-full max-w-sm aspect-square relative">
+                        <canvas id="cli-radar-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7 bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Tabla Comparativa de Sub-escalas</h3>
+                                <p class="text-xs text-slate-500">Desglose detallado de puntajes brutos, porcentajes y sesiones de intervención.</p>
+                            </div>
+                            <button type="button" onclick="cli_exportarCSV()" class="btn-touch px-4 py-2 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold text-xs flex items-center gap-2 shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                <span>Exportar CSV</span>
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="border-b-2 border-slate-200 text-slate-600 text-xs uppercase">
+                                        <th class="py-3 px-2">Área / Sub-escala</th>
+                                        <th class="py-3 px-2">Puntaje Bruto</th>
+                                        <th class="py-3 px-2">Rendimiento</th>
+                                        <th class="py-3 px-2">Interpretación</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cli-tabla-subescalas" class="divide-y divide-slate-100">
+                                    <!-- Renderizado dinámico JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="cli-resumen-intervencion-box" class="mt-6 bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <span class="text-xs font-bold uppercase text-petrol">Actividad en Intervención Terapéutica</span>
+                            <p id="cli-stats-intervencion" class="text-sm text-slate-700 font-medium mt-0.5">0 ejercicios completados registrados.</p>
+                        </div>
+                        <button type="button" onclick="cambiarVista('vista-intervencion')" class="btn-touch px-4 rounded-xl bg-petrol text-white font-semibold text-xs">
+                            Abrir Sistema de Intervención
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             3. VISTA PORTAL PACIENTE
+        ====================================================================== -->
+        <section id="vista-portal-paciente" class="vista-spa">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <span id="pac-tag-ruta" class="inline-block px-3 py-1 rounded-full bg-teal-50 text-petrol font-bold text-xs uppercase mb-2">
+                        Plan Personalizado
+                    </span>
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900">Mi Espacio de Rehabilitación</h2>
+                    <p id="pac-instruccion-ruta" class="text-slate-600 mt-1">Sigue los pasos indicados por tu equipo clínico.</p>
+                </div>
+                <button id="btn-salir-portal-paciente" type="button" onclick="salirPortalPaciente()" class="btn-touch px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm">
+                    Cambiar Perfil
+                </button>
+            </div>
+
+            <!-- Contenedor dinámico según neuro_ruta_activa -->
+            <div id="pac-contenido-dinamico" class="space-y-6"></div>
+        </section>
+
+        <!-- =====================================================================
+             4. VISTA EVALUACIÓN COGNITIVA (PREFIJO cog_)
+        ====================================================================== -->
+        <section id="vista-eval-cognitiva" class="vista-spa">
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Evaluación Neurocognitiva Basal</span>
+                        <h2 class="text-2xl font-extrabold text-slate-900">Batería MMSE / MoCA / FAB</h2>
+                    </div>
+                    <button type="button" onclick="volverAlInicio()" class="btn-touch px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm">
+                        ← Volver al Inicio
+                    </button>
+                </div>
+
+                <!-- Indicador de pasos -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                        <span id="cog-paso-titulo" class="font-bold text-petrol text-lg">Paso 1 de 5: Orientación Temporal (MMSE)</span>
+                        <span id="cog-paso-badge" class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold text-xs">1 / 5</span>
+                    </div>
+
+                    <!-- Paso 1: MMSE Orientación Temporal y Espacial -->
+                    <div id="cog-step-1" class="cog-step space-y-5">
+                        <p class="text-slate-700 font-medium">Seleccione las respuestas correctas correspondientes al día y contexto actual:</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">1. ¿En qué año estamos?</label>
+                                <select id="cog-q-anio" class="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white font-semibold">
+                                    <option value="">Seleccione año...</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">2. ¿Qué día de la semana es hoy?</label>
+                                <select id="cog-q-dia" class="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white font-semibold">
+                                    <option value="">Seleccione día...</option>
+                                    <option value="Lunes">Lunes</option>
+                                    <option value="Martes">Martes</option>
+                                    <option value="Miércoles">Miércoles</option>
+                                    <option value="Jueves">Jueves</option>
+                                    <option value="Viernes">Viernes</option>
+                                    <option value="Sábado">Sábado</option>
+                                    <option value="Domingo">Domingo</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">3. ¿En qué mes nos encontramos?</label>
+                                <select id="cog-q-mes" class="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white font-semibold">
+                                    <option value="">Seleccione mes...</option>
+                                    <option value="Enero">Enero</option>
+                                    <option value="Febrero">Febrero</option>
+                                    <option value="Marzo">Marzo</option>
+                                    <option value="Abril">Abril</option>
+                                    <option value="Mayo">Mayo</option>
+                                    <option value="Junio">Junio</option>
+                                    <option value="Julio">Julio</option>
+                                    <option value="Agosto">Agosto</option>
+                                    <option value="Septiembre">Septiembre</option>
+                                    <option value="Octubre">Octubre</option>
+                                    <option value="Noviembre">Noviembre</option>
+                                    <option value="Diciembre">Diciembre</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">4. ¿En qué entorno se encuentra?</label>
+                                <select id="cog-q-lugar" class="w-full p-3.5 rounded-2xl border-2 border-slate-200 bg-white font-semibold">
+                                    <option value="">Seleccione entorno...</option>
+                                    <option value="correcto">Centro de Salud / Rehabilitación / Hogar</option>
+                                    <option value="incorrecto">Aeropuerto Internacional</option>
+                                    <option value="incorrecto2">Estación Espacial</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pt-4 flex justify-end">
+                            <button type="button" onclick="cog_irPaso(2)" class="btn-touch px-8 rounded-2xl bg-petrol text-white font-bold">Siguiente →</button>
+                        </div>
+                    </div>
+
+                    <!-- Paso 2: MMSE Atención y Cálculo (Resta Serial de 7 desde 100) + Codificación 5 Palabras MoCA -->
+                    <div id="cog-step-2" class="cog-step hidden space-y-6">
+                        <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
+                            <h3 class="font-bold text-indigo-900 mb-1">A. Codificación de Memoria (MoCA)</h3>
+                            <p class="text-sm text-indigo-800 mb-3">Memorice estas 5 palabras. Se le preguntarán nuevamente al final de la evaluación:</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-4 py-2 rounded-xl bg-white font-extrabold text-petrol shadow-sm">ROSTRO</span>
+                                <span class="px-4 py-2 rounded-xl bg-white font-extrabold text-petrol shadow-sm">SEDA</span>
+                                <span class="px-4 py-2 rounded-xl bg-white font-extrabold text-petrol shadow-sm">IGLESIA</span>
+                                <span class="px-4 py-2 rounded-xl bg-white font-extrabold text-petrol shadow-sm">CLAVEL</span>
+                                <span class="px-4 py-2 rounded-xl bg-white font-extrabold text-petrol shadow-sm">ROJO</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="font-bold text-slate-900 mb-2">B. Atención y Cálculo: Resta Serial de 7 (MMSE)</h3>
+                            <p class="text-sm text-slate-600 mb-4">Comenzando desde <strong>100</strong>, reste 7 sucesivamente en los 5 recuadros:</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                <div>
+                                    <label class="text-xs font-bold text-slate-500">100 - 7 =</label>
+                                    <input type="number" id="cog-sub-1" class="w-full p-3 rounded-xl border-2 border-slate-200 text-center font-bold text-lg" placeholder="?">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-slate-500">- 7 =</label>
+                                    <input type="number" id="cog-sub-2" class="w-full p-3 rounded-xl border-2 border-slate-200 text-center font-bold text-lg" placeholder="?">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-slate-500">- 7 =</label>
+                                    <input type="number" id="cog-sub-3" class="w-full p-3 rounded-xl border-2 border-slate-200 text-center font-bold text-lg" placeholder="?">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-slate-500">- 7 =</label>
+                                    <input type="number" id="cog-sub-4" class="w-full p-3 rounded-xl border-2 border-slate-200 text-center font-bold text-lg" placeholder="?">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-bold text-slate-500">- 7 =</label>
+                                    <input type="number" id="cog-sub-5" class="w-full p-3 rounded-xl border-2 border-slate-200 text-center font-bold text-lg" placeholder="?">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-between">
+                            <button type="button" onclick="cog_irPaso(1)" class="btn-touch px-6 rounded-2xl bg-slate-100 text-slate-700 font-bold">← Anterior</button>
+                            <button type="button" onclick="cog_irPaso(3)" class="btn-touch px-8 rounded-2xl bg-petrol text-white font-bold">Siguiente →</button>
+                        </div>
+                    </div>
+
+                    <!-- Paso 3: MoCA TMT-B Digital (1 - A - 2 - B - 3 - C - 4 - D) -->
+                    <div id="cog-step-3" class="cog-step hidden space-y-5">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-lg">Alternancia Visuoespacial TMT-B Digital (MoCA)</h3>
+                            <p class="text-sm text-slate-600">Toque los nodos en orden alternante ascendente: <strong>1 → A → 2 → B → 3 → C → 4 → D</strong>.</p>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex items-center justify-between">
+                            <span class="text-sm font-semibold text-slate-700">Secuencia marcada: <strong id="cog-tmt-secuencia" class="text-petrol">Ninguna</strong></span>
+                            <button type="button" onclick="cog_reiniciarTMT()" class="px-3 py-1.5 rounded-xl bg-white border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100">Reiniciar</button>
+                        </div>
+
+                        <div id="cog-tmt-grid" class="grid grid-cols-4 gap-4 max-w-md mx-auto py-4">
+                            <!-- Nodos generados dinámicamente -->
+                        </div>
+
+                        <div class="pt-4 flex justify-between">
+                            <button type="button" onclick="cog_irPaso(2)" class="btn-touch px-6 rounded-2xl bg-slate-100 text-slate-700 font-bold">← Anterior</button>
+                            <button type="button" onclick="cog_irPaso(4)" class="btn-touch px-8 rounded-2xl bg-petrol text-white font-bold">Siguiente →</button>
+                        </div>
+                    </div>
+
+                    <!-- Paso 4: FAB Control Inhibitorio Go / No-Go (10 ensayos) -->
+                    <div id="cog-step-4" class="cog-step hidden space-y-5">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-lg">Control Inhibitorio Ejecutivo Go / No-Go (FAB)</h3>
+                            <p class="text-sm text-slate-600">
+                                Regla: Presione <strong>"TOCAR (GO)"</strong> cuando aparezca un <span class="text-emerald-600 font-bold">CÍRCULO VERDE</span>. 
+                                <strong>NO toque nada</strong> cuando aparezca una <span class="text-rose-600 font-bold">CRUZ ROJA (NO-GO)</span>. (10 ensayos rápidos).
+                            </p>
+                        </div>
+
+                        <div class="bg-slate-900 rounded-3xl p-8 text-center text-white flex flex-col items-center justify-center min-h-[240px]">
+                            <p id="cog-gng-status" class="text-sm text-slate-300 mb-4">Ensayo 0 / 10</p>
+                            <div id="cog-gng-estimulo" class="w-28 h-28 rounded-full bg-slate-800 border-2 border-slate-600 flex items-center justify-center text-4xl font-black mb-6">
+                                ?
+                            </div>
+                            <div class="flex gap-4">
+                                <button id="cog-gng-start-btn" type="button" onclick="cog_iniciarGoNoGo()" class="btn-touch px-6 rounded-2xl bg-sage hover:bg-sage-dark text-white font-bold">
+                                    Iniciar Prueba Go/No-Go
+                                </button>
+                                <button id="cog-gng-tap-btn" type="button" onclick="cog_registrarTapGoNoGo()" disabled class="btn-touch px-8 rounded-2xl bg-white text-slate-900 font-extrabold disabled:opacity-40">
+                                    TOCAR (GO)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-between">
+                            <button type="button" onclick="cog_irPaso(3)" class="btn-touch px-6 rounded-2xl bg-slate-100 text-slate-700 font-bold">← Anterior</button>
+                            <button type="button" onclick="cog_irPaso(5)" class="btn-touch px-8 rounded-2xl bg-petrol text-white font-bold">Siguiente →</button>
+                        </div>
+                    </div>
+
+                    <!-- Paso 5: Memoria Diferida MoCA (5 palabras) -->
+                    <div id="cog-step-5" class="cog-step hidden space-y-5">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-lg">Recuerdo Diferido sin Pistas (MoCA)</h3>
+                            <p class="text-sm text-slate-600">Seleccione las <strong>5 palabras</strong> que memorizó al inicio de la prueba:</p>
+                        </div>
+
+                        <div id="cog-memoria-opciones" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <!-- Opciones mezcladas -->
+                        </div>
+
+                        <div class="pt-6 flex justify-between items-center border-t border-slate-100">
+                            <button type="button" onclick="cog_irPaso(4)" class="btn-touch px-6 rounded-2xl bg-slate-100 text-slate-700 font-bold">← Anterior</button>
+                            <button type="button" onclick="cog_finalizarEvaluacion()" class="btn-touch px-8 rounded-2xl bg-sage hover:bg-sage-dark text-white font-extrabold shadow-md">
+                                Guardar Evaluación Cognitiva ✓
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             5. VISTA EVALUACIÓN MOTORA (PREFIJO mot_)
+        ====================================================================== -->
+        <section id="vista-eval-motora" class="vista-spa">
+            <div class="max-w-5xl mx-auto">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-sage">Evaluación Neuromotora Basal</span>
+                        <h2 class="text-2xl font-extrabold text-slate-900">Kapandji / Fugl-Meyer EESS / ARAT</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="mot_toggleCamara()" id="mot-btn-camara" class="btn-touch px-4 rounded-2xl bg-teal-50 text-petrol border border-teal-200 font-bold text-xs">
+                            Activar Cámara Clínica
+                        </button>
+                        <button type="button" onclick="volverAlInicio()" class="btn-touch px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm">
+                            ← Volver al Inicio
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Visor opcional de cámara con overlay de zonas posturales -->
+                <div id="mot-camara-wrapper" class="hidden bg-slate-900 rounded-3xl p-4 mb-6 relative overflow-hidden">
+                    <div class="relative max-w-xl mx-auto rounded-2xl overflow-hidden aspect-video bg-black">
+                        <video id="mot-video" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+                        <canvas id="mot-overlay-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+                        <div class="absolute top-3 left-3 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                            Seguimiento Postural Activo
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Sub-escala 1: Kapandji Digital (0-10) -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs">1. Oposición del Pulgar</span>
+                            <h3 class="text-xl font-bold text-slate-900 mt-2">Escala Kapandji (0–10)</h3>
+                            <p class="text-xs text-slate-500 mt-1 mb-4">Seleccione el nivel máximo de oposición alcanzado con el pulgar hacia los dedos y pliegue palmar.</p>
+
+                            <div class="bg-slate-50 rounded-2xl p-4 text-center mb-4 border border-slate-200">
+                                <span class="text-4xl font-black text-petrol" id="mot-kapandji-val">5</span>
+                                <span class="text-sm font-bold text-slate-400"> / 10</span>
+                                <p id="mot-kapandji-desc" class="text-xs text-slate-600 mt-1 font-medium">Pulpejo del dedo meñique</p>
+                            </div>
+
+                            <input type="range" id="mot-kapandji-slider" min="0" max="10" value="5" oninput="mot_actualizarKapandji(this.value)" class="w-full accent-sage h-3 bg-slate-200 rounded-lg cursor-pointer mb-4">
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button type="button" onclick="mot_setKapandji(2)" class="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold">Índice (2)</button>
+                            <button type="button" onclick="mot_setKapandji(6)" class="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold">Meñique (6)</button>
+                            <button type="button" onclick="mot_setKapandji(10)" class="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold">Pliegue (10)</button>
+                        </div>
+                    </div>
+
+                    <!-- Sub-escala 2: Fugl-Meyer EESS (Zonas Posturales 3.0s / Manual) -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-teal-50 text-petrol font-bold text-xs">2. Sinergia y Control EESS</span>
+                            <h3 class="text-xl font-bold text-slate-900 mt-2">Fugl-Meyer EESS (0–66)</h3>
+                            <p class="text-xs text-slate-500 mt-1 mb-4">Sostenga cada postura durante <strong>3.0 segundos</strong> o registre la puntuación clínica observada.</p>
+
+                            <!-- Temporizador postural 3.0s -->
+                            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-4 text-center">
+                                <div class="text-2xl font-black text-sage mb-1" id="mot-fm-timer">3.0 s</div>
+                                <p id="mot-fm-postura-label" class="text-xs font-semibold text-slate-600 mb-3">Postura: Flexión Hombro 90° sin sinergia</p>
+                                <button type="button" onclick="mot_iniciarHoldPostural()" id="mot-fm-hold-btn" class="btn-touch w-full rounded-xl bg-petrol text-white font-bold text-xs">
+                                    Iniciar Cronómetro Postural 3.0s
+                                </button>
+                            </div>
+
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Puntaje Clínico Fugl-Meyer EESS (0 - 66):</label>
+                            <input type="number" id="mot-fm-score" min="0" max="66" value="44" class="w-full p-3 rounded-xl border-2 border-slate-200 font-bold text-center text-lg">
+                        </div>
+                    </div>
+
+                    <!-- Sub-escala 3: ARAT (3 Sub-tareas cinemáticas táctiles) -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 font-bold text-xs">3. Destreza Funcional</span>
+                            <h3 class="text-xl font-bold text-slate-900 mt-2">Prueba Táctil ARAT</h3>
+                            <p class="text-xs text-slate-500 mt-1 mb-4">Evalúe las 3 sub-tareas de agarre, pinza y movimiento grueso (0–3 pts cada una):</p>
+
+                            <div class="space-y-3">
+                                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Sub-tarea 1: Agarre Cilíndrico / Bloque</label>
+                                    <select id="mot-arat-1" class="w-full p-2 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                                        <option value="3">3 - Normal (&lt; 5 seg)</option>
+                                        <option value="2" selected>2 - Completa con dificultad</option>
+                                        <option value="1">1 - Completa parcialmente</option>
+                                        <option value="0">0 - No logra realizar</option>
+                                    </select>
+                                </div>
+                                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Sub-tarea 2: Pinza Fina (Canica)</label>
+                                    <select id="mot-arat-2" class="w-full p-2 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                                        <option value="3">3 - Normal (&lt; 5 seg)</option>
+                                        <option value="2" selected>2 - Completa con dificultad</option>
+                                        <option value="1">1 - Completa parcialmente</option>
+                                        <option value="0">0 - No logra realizar</option>
+                                    </select>
+                                </div>
+                                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Sub-tarea 3: Elevación Mano a Boca</label>
+                                    <select id="mot-arat-3" class="w-full p-2 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                                        <option value="3" selected>3 - Normal (&lt; 5 seg)</option>
+                                        <option value="2">2 - Completa con dificultad</option>
+                                        <option value="1">1 - Completa parcialmente</option>
+                                        <option value="0">0 - No logra realizar</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-4">
+                    <p class="text-sm text-slate-600">Al guardar se calculará el índice motor normalizado (0-100%) en el perfil basal.</p>
+                    <button type="button" onclick="mot_finalizarEvaluacion()" class="btn-touch px-8 rounded-2xl bg-sage hover:bg-sage-dark text-white font-extrabold shadow-md">
+                        Guardar Evaluación Motora ✓
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             6. VISTA EVALUACIÓN DE LENGUAJE ART (PREFIJO len_)
+        ====================================================================== -->
+        <section id="vista-eval-lenguaje" class="vista-spa">
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-sky-600">Evaluación Fonoaudiológica Basal</span>
+                        <h2 class="text-2xl font-extrabold text-slate-900">Prueba Rápida de Afasia (ART)</h2>
+                    </div>
+                    <button type="button" onclick="volverAlInicio()" class="btn-touch px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm">
+                        ← Volver al Inicio
+                    </button>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- 1. Comprensión de Órdenes con Síntesis de Voz (TTS) -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <h3 class="text-lg font-bold text-slate-900">1. Comprensión Auditiva de Órdenes</h3>
+                            <button type="button" onclick="len_reproducirOrdenTTS()" class="btn-touch px-4 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold text-xs flex items-center gap-2">
+                                <span>🔊 Escuchar Orden por Voz</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4">Instrucción: <em>"Toque primero el círculo azul y después el cuadrado verde"</em>.</p>
+                        <div class="grid grid-cols-3 gap-4 max-w-md mx-auto mb-3">
+                            <button type="button" onclick="len_marcarFigura('circulo_azul')" class="btn-touch p-4 rounded-2xl border-2 border-slate-200 hover:border-sky-500 flex flex-col items-center gap-2">
+                                <span class="w-10 h-10 rounded-full bg-blue-600 block"></span>
+                                <span class="text-xs font-bold">Círculo Azul</span>
+                            </button>
+                            <button type="button" onclick="len_marcarFigura('triangulo_rojo')" class="btn-touch p-4 rounded-2xl border-2 border-slate-200 hover:border-sky-500 flex flex-col items-center gap-2">
+                                <span class="w-10 h-10 bg-rose-600 rotate-45 block scale-75"></span>
+                                <span class="text-xs font-bold">Rombo Rojo</span>
+                            </button>
+                            <button type="button" onclick="len_marcarFigura('cuadrado_verde')" class="btn-touch p-4 rounded-2xl border-2 border-slate-200 hover:border-sky-500 flex flex-col items-center gap-2">
+                                <span class="w-10 h-10 rounded-md bg-emerald-600 block"></span>
+                                <span class="text-xs font-bold">Cuadrado Verde</span>
+                            </button>
+                        </div>
+                        <p id="len-comprension-feedback" class="text-center text-xs font-bold text-petrol">Secuencia tocada: Ninguna</p>
+                    </div>
+
+                    <!-- 2. Denominación Visual con SpeechRecognition / Botones Clínicos -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="text-lg font-bold text-slate-900 mb-1">2. Denominación por Confrontación Visual</h3>
+                        <p class="text-sm text-slate-600 mb-4">Nombre en voz alta los objetos mostrados utilizando el micrófono o valide clínicamente:</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center bg-slate-50 rounded-2xl p-5 border border-slate-200">
+                            <div class="flex flex-col items-center justify-center bg-white p-6 rounded-2xl border border-slate-200">
+                                <!-- SVG Ícono Reloj -->
+                                <svg id="len-denom-svg" class="w-24 h-24 text-petrol mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="9"></circle>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 3"></path>
+                                </svg>
+                                <span id="len-denom-pista" class="text-xs font-semibold text-slate-400">Estímulo Visual #1</span>
+                            </div>
+                            <div class="space-y-3">
+                                <button type="button" onclick="len_iniciarReconocimientoVoz()" id="len-btn-mic" class="btn-touch w-full rounded-2xl bg-petrol hover:bg-petrol-dark text-white font-bold text-sm flex items-center justify-center gap-2">
+                                    <span>🎙️ Activar Micrófono (Speech API)</span>
+                                </button>
+                                <p id="len-speech-transcript" class="text-xs text-slate-600 bg-white p-3 rounded-xl border border-slate-200 min-h-[44px]">
+                                    Transcripción de voz aparecerá aquí...
+                                </p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" onclick="len_registrarDenominacion(true)" class="btn-touch rounded-xl bg-emerald-600 text-white font-bold text-xs">
+                                        ✓ Denominación Correcta
+                                    </button>
+                                    <button type="button" onclick="len_registrarDenominacion(false)" class="btn-touch rounded-xl bg-amber-500 text-white font-bold text-xs">
+                                        Parafasia / No logra
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Repetición Verbal y Fluencia Semántica 60s -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                            <h3 class="text-lg font-bold text-slate-900 mb-2">3. Repetición Verbal</h3>
+                            <p class="text-xs text-slate-500 mb-3">Escuche la frase y evalúe la precisión articulatória:</p>
+                            <button type="button" onclick="len_hablarTexto('El perro marrón cruzó el puente de madera')" class="btn-touch w-full mb-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs">
+                                🔊 Escuchar Frase Modelo
+                            </button>
+                            <select id="len-repeticion-score" class="w-full p-3 rounded-xl border-2 border-slate-200 font-bold text-sm bg-white">
+                                <option value="3">3 pts - Repetición exacta y fluida</option>
+                                <option value="2" selected>2 pts - Leve distorsión fonémica</option>
+                                <option value="1">1 pt - Repetición incompleta</option>
+                                <option value="0">0 pts - Incapaz de repetir</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-lg font-bold text-slate-900">4. Fluencia Semántica (60s)</h3>
+                                <span id="len-fluencia-timer" class="px-3 py-1 rounded-full bg-rose-50 text-rose-700 font-black text-sm">60s</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-3">Nombre todos los <strong>ANIMALES</strong> posibles en 1 minuto.</p>
+                            <div class="flex items-center gap-2 mb-3">
+                                <button type="button" onclick="len_iniciarTimerFluencia()" class="btn-touch flex-1 rounded-xl bg-petrol text-white font-bold text-xs">
+                                    Iniciar 60s
+                                </button>
+                                <button type="button" onclick="len_sumarPalabraFluencia()" class="btn-touch flex-1 rounded-xl bg-sage text-white font-extrabold text-sm">
+                                    +1 Animal (<span id="len-fluencia-count">0</span>)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <span class="text-xs font-bold text-slate-500 uppercase">Índice ART Calculado</span>
+                            <p id="len-preview-severidad" class="text-sm font-bold text-petrol">Complete los ítems y guarde el perfil ART.</p>
+                        </div>
+                        <button type="button" onclick="len_finalizarEvaluacion()" class="btn-touch px-8 rounded-2xl bg-sage hover:bg-sage-dark text-white font-extrabold shadow-md">
+                            Guardar Evaluación Lenguaje ✓
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =====================================================================
+             7. VISTA SISTEMA DE INTERVENCIÓN TERAPÉUTICA MULTIMODAL (PREFIJO int_)
+        ====================================================================== -->
+        <section id="vista-intervencion" class="vista-spa">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-sage">Rehabilitación Activa Multimodal</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Sistema de Intervención Terapéutica</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="int-contador-global" class="px-4 py-2 rounded-2xl bg-teal-50 text-petrol font-bold text-xs border border-teal-200">
+                        Sesiones completadas: 0
+                    </span>
+                    <button type="button" onclick="volverAlInicio()" class="btn-touch px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm">
+                        ← Volver al Inicio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pestañas de Área Terapéutica -->
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <button type="button" onclick="int_seleccionarTab('cognitiva')" id="int-tab-cognitiva" class="int-tab-btn btn-touch rounded-2xl font-bold text-sm bg-petrol text-white shadow-sm">
+                    🧠 Área Cognitiva
+                </button>
+                <button type="button" onclick="int_seleccionarTab('motora')" id="int-tab-motora" class="int-tab-btn btn-touch rounded-2xl font-bold text-sm bg-white text-slate-700 border border-slate-200">
+                    🦾 Área Motora
+                </button>
+                <button type="button" onclick="int_seleccionarTab('lenguaje')" id="int-tab-lenguaje" class="int-tab-btn btn-touch rounded-2xl font-bold text-sm bg-white text-slate-700 border border-slate-200">
+                    🗣️ Área Lenguaje
+                </button>
+            </div>
+
+            <!-- PANEL INTERVENCIÓN COGNITIVA -->
+            <div id="int-panel-cognitiva" class="int-panel space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Ejercicio 1: Go/No-Go Adaptativo -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold text-xs">Atención Sostenida</span>
+                            <h3 class="text-lg font-bold text-slate-900 mt-2">Go / No-Go Adaptativo</h3>
+                            <p class="text-xs text-slate-500 mt-1 mb-4">Responda solo ante el estímulo objetivo azul. Velocidad adaptativa según aciertos.</p>
+                            <div class="bg-slate-900 rounded-2xl p-6 text-center text-white mb-4">
+                                <div id="int-cog-estimulo" class="text-3xl font-black py-4 text-cyan-400">LISTO</div>
+                                <p id="int-cog-stats" class="text-xs text-slate-400">Aciertos: 0 | Errores: 0</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="int_iniciarGoNoGoAdaptativo()" class="btn-touch rounded-xl bg-petrol text-white font-bold text-xs">Iniciar Ronda</button>
+                            <button type="button" onclick="int_responderGoNoGoAdaptativo()" class="btn-touch rounded-xl bg-sage text-white font-extrabold text-xs">¡RESPONDER!</button>
+                        </div>
+                    </div>
+
+                    <!-- Ejercicio 2: Memoria Episódica y Prospectiva -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-purple-50 text-purple-700 font-bold text-xs">Memoria Funcional</span>
+                            <h3 class="text-lg font-bold text-slate-900 mt-2">Memoria Prospectiva</h3>
+                            <p class="text-xs text-slate-500 mt-1 mb-4">Recuerde la consigna terapéutica programada y ejecútela en el momento indicado:</p>
+                            <div class="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-4">
+                                <p class="text-xs font-bold text-purple-900">Consigna Activa:</p>
+                                <p class="text-sm text-purple-800 mt-1">"Tomar medicación antihipertensiva después del desayuno a las 08:30 hrs".</p>
+                            </div>
+                            <select id="int-mem-respuesta" class="w-full p-3 rounded-xl border border-slate-300 text-xs font-bold mb-3 bg-white">
+                                <option value="">¿Cuál es la acción y horario correcto?</option>
+                                <option value="ok">Medicación después del desayuno (08:30 hrs)</option>
+                                <option value="err1">Ejercicios físicos antes de dormir (22:00 hrs)</option>
+                                <option value="err2">Medicación en ayunas (06:00 hrs)</option>
+                            </select>
+                        </div>
+                        <button type="button" onclick="int_validarMemoriaProspectiva()" class="btn-touch w-full rounded-xl bg-petrol text-white font-bold text-xs">
+                            Validar Memoria Prospectiva
+                        </button>
+                    </div>
+
+                    <!-- Ejercicio 3: Planificación de Actividades de la Vida Diaria (AVD) -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-700 font-bold text-xs">Función Ejecutiva</span>
+                            <h3 class="text-lg font-bold text-slate-900 mt-2">Secuenciación AVD</h3>
+                            <p class="text-xs text-slate-500 mt-1 mb-3">Ordene lógicamente los pasos para <strong>preparar una infusión caliente segura</strong>:</p>
+                            <div id="int-avd-lista" class="space-y-2 mb-4">
+                                <button type="button" onclick="int_seleccionarPasoAVD(this, 2)" class="w-full text-left p-3 rounded-xl border border-slate-200 text-xs font-semibold hover:bg-slate-50">
+                                    Calentar agua en hervidor eléctrico
+                                </button>
+                                <button type="button" onclick="int_seleccionarPasoAVD(this, 1)" class="w-full text-left p-3 rounded-xl border border-slate-200 text-xs font-semibold hover:bg-slate-50">
+                                    Colocar taza limpia y bolsa de té en la mesa
+                                </button>
+                                <button type="button" onclick="int_seleccionarPasoAVD(this, 3)" class="w-full text-left p-3 rounded-xl border border-slate-200 text-xs font-semibold hover:bg-slate-50">
+                                    Verter el agua cuidadosamente y esperar 3 minutos
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" onclick="int_reiniciarAVD()" class="btn-touch w-full rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
+                            Reiniciar Secuencia AVD
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL INTERVENCIÓN MOTORA -->
+            <div id="int-panel-motora" class="int-panel hidden">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 max-w-4xl mx-auto">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs">Entrenamiento Extremidad Superior</span>
+                            <h3 class="text-xl font-bold text-slate-900 mt-1">Protocolo de Alcance, Agarre y Control Postural</h3>
+                        </div>
+                        <select id="int-mot-nivel" class="p-3 rounded-xl border-2 border-slate-200 font-bold text-xs bg-white">
+                            <option value="Nivel 1: Alcance Asistido en Mesa">Nivel 1: Alcance Asistido en Mesa</option>
+                            <option value="Nivel 2: Elevación Antigravitatoria 90°">Nivel 2: Elevación Antigravitatoria 90°</option>
+                            <option value="Nivel 3: Pinza Funcional y Pronosupinación">Nivel 3: Pinza Funcional y Pronosupinación</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-slate-50 rounded-2xl p-5 text-center border border-slate-200">
+                            <span class="text-xs font-bold uppercase text-slate-500">Temporizador Serie</span>
+                            <div id="int-mot-crono" class="text-3xl font-black text-petrol my-2">00:45</div>
+                            <button type="button" onclick="int_toggleTimerMotor()" id="int-mot-btn-timer" class="btn-touch w-full rounded-xl bg-petrol text-white font-bold text-xs">
+                                Iniciar Serie (45s)
+                            </button>
+                        </div>
+
+                        <div class="bg-emerald-50 rounded-2xl p-5 text-center border border-emerald-200">
+                            <span class="text-xs font-bold uppercase text-emerald-800">Repeticiones Efectivas</span>
+                            <div id="int-mot-efectivas" class="text-4xl font-black text-emerald-700 my-2">0</div>
+                            <button type="button" onclick="int_registrarRepeticion('efectiva')" class="btn-touch w-full rounded-xl bg-sage text-white font-bold text-xs">
+                                +1 Repetición Limpia
+                            </button>
+                        </div>
+
+                        <div class="bg-amber-50 rounded-2xl p-5 text-center border border-amber-200">
+                            <span class="text-xs font-bold uppercase text-amber-800">Con Compensación</span>
+                            <div id="int-mot-compensadas" class="text-4xl font-black text-amber-700 my-2">0</div>
+                            <button type="button" onclick="int_registrarRepeticion('compensada')" class="btn-touch w-full rounded-xl bg-amber-500 text-white font-bold text-xs">
+                                +1 Con Compensación
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="button" onclick="int_guardarSesionMotora()" class="btn-touch px-8 rounded-2xl bg-petrol hover:bg-petrol-dark text-white font-extrabold text-sm">
+                            Registrar Serie Motora en Historial ✓
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL INTERVENCIÓN LENGUAJE -->
+            <div id="int-panel-lenguaje" class="int-panel hidden">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 max-w-4xl mx-auto">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div>
+                            <span class="px-3 py-1 rounded-full bg-sky-50 text-sky-700 font-bold text-xs">Terapia de Anomia y Acceso Léxico</span>
+                            <h3 class="text-xl font-bold text-slate-900 mt-1">Denominación con Jerarquía de Pistas y Rasgos Semánticos</h3>
+                        </div>
+                        <span id="int-len-item-idx" class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">Estímulo 1 / 3</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                        <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 flex flex-col items-center justify-center text-center">
+                            <div id="int-len-emoji" class="text-7xl mb-4">🔑</div>
+                            <p class="text-xs font-bold uppercase text-slate-400">Objeto Objetivo</p>
+                            <div id="int-len-pista-box" class="mt-4 p-3 rounded-xl bg-white border border-slate-200 text-sm font-medium text-petrol w-full">
+                                Sin pista activa. Intente nombrar el objeto.
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <p class="text-xs font-bold uppercase text-slate-500">Jerarquía de Facilitación Terapéutica:</p>
+                            <button type="button" onclick="int_mostrarPistaLenguaje(1)" class="btn-touch w-full text-left px-4 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 font-semibold text-xs">
+                                Nivel 1: Rasgo Semántico (Función y Categoría)
+                            </button>
+                            <button type="button" onclick="int_mostrarPistaLenguaje(2)" class="btn-touch w-full text-left px-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-semibold text-xs">
+                                Nivel 2: Clave Fonológica Inicial (Primera Sílaba)
+                            </button>
+                            <button type="button" onclick="int_mostrarPistaLenguaje(3)" class="btn-touch w-full text-left px-4 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-semibold text-xs">
+                                Nivel 3: Modelo Auditivo Completo (TTS)
+                            </button>
+
+                            <div class="pt-3 border-t border-slate-100 flex gap-2">
+                                <button type="button" onclick="int_completarItemLenguaje()" class="btn-touch flex-1 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold text-xs">
+                                    ✓ Logrado / Siguiente Estímulo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- =========================================================================
+         LÓGICA DE ARQUITECTURA SPA, CONTROL DE ROLES Y MÓDULOS CLÍNICOS
+    ========================================================================== -->
+    <script>
+        // =========================================================================
+        // ESTADO GLOBAL Y CONSTANTES DE ALMACENAMIENTO
+        // =========================================================================
+        const STORAGE_KEYS = {
+            PIN: 'neuro_pin_clinico',
+            RUTA: 'neuro_ruta_activa',
+            COG: 'neuro_eval_cognitiva',
+            MOT: 'neuro_eval_motora',
+            LEN: 'neuro_eval_lenguaje',
+            INT: 'neurorehab_app_integral_v1'
+        };
+
+        let app_rolActivo = null; // 'clinico' | 'paciente'
+        let app_modoBloqueadoURL = false;
+        let app_pinBuffer = '';
+        let cli_radarInstance = null;
+
+        // Registro centralizado de recursos multimedia e intervalos para limpieza obligatoria en cambiarVista()
+        let app_activeStreams = [];
+        let app_activeIntervals = [];
+        let app_activeTimeouts = [];
+        let app_activeRAF = null;
+        let app_activeSpeechRecognition = null;
+
+        // =========================================================================
+        // INICIALIZACIÓN DE LA APLICACIÓN
+        // =========================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem(STORAGE_KEYS.PIN)) {
+                localStorage.setItem(STORAGE_KEYS.PIN, '1234');
+            }
+            if (!localStorage.getItem(STORAGE_KEYS.RUTA)) {
+                localStorage.setItem(STORAGE_KEYS.RUTA, 'evaluacion_basal');
+            }
+
+            // Verificar parámetro URL ?modo=paciente
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('modo') === 'paciente') {
+                app_modoBloqueadoURL = true;
+                iniciarComoPaciente(true);
+            } else {
+                cambiarVista('vista-bienvenida');
+            }
+
+            // Inicializar componentes internos
+            cog_initTMT();
+            cog_initMemoriaOpciones();
+            int_renderEstímuloLenguaje();
+        });
+
+        // =========================================================================
+        // FUNCIÓN GLOBAL OBLIGATORIA DE NAVEGACIÓN Y LIMPIEZA DE RECURSOS
+        // =========================================================================
+        function cambiarVista(idVista) {
+            // 1. Detener obligatoriamente cualquier MediaStream activo
+            app_activeStreams.forEach(stream => {
+                try {
+                    stream.getTracks().forEach(track => track.stop());
+                } catch (e) {}
+            });
+            app_activeStreams = [];
+
+            const videoEl = document.getElementById('mot-video');
+            if (videoEl && videoEl.srcObject) {
+                try {
+                    videoEl.srcObject.getTracks().forEach(t => t.stop());
+                } catch (e) {}
+                videoEl.srcObject = null;
+            }
+            const camWrapper = document.getElementById('mot-camara-wrapper');
+            if (camWrapper) camWrapper.classList.add('hidden');
+            const btnCam = document.getElementById('mot-btn-camara');
+            if (btnCam) btnCam.textContent = 'Activar Cámara Clínica';
+
+            // 2. Cancelar requestAnimationFrame activo
+            if (app_activeRAF !== null) {
+                cancelAnimationFrame(app_activeRAF);
+                app_activeRAF = null;
+            }
+
+            // 3. Limpiar intervalos y timeouts activos
+            app_activeIntervals.forEach(id => clearInterval(id));
+            app_activeIntervals = [];
+            app_activeTimeouts.forEach(id => clearTimeout(id));
+            app_activeTimeouts = [];
+
+            // 4. Cancelar síntesis de voz (TTS) y SpeechRecognition
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (app_activeSpeechRecognition) {
+                try {
+                    app_activeSpeechRecognition.abort();
+                } catch (e) {}
+                app_activeSpeechRecognition = null;
+            }
+
+            // 5. Cambiar visibilidad de secciones SPA
+            document.querySelectorAll('.vista-spa').forEach(sec => {
+                sec.classList.remove('activa');
+            });
+            const target = document.getElementById(idVista);
+            if (target) {
+                target.classList.add('activa');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            // 6. Refrescar datos específicos según vista destino
+            if (idVista === 'vista-panel-clinico') {
+                cli_refrescarDashboard();
+            } else if (idVista === 'vista-portal-paciente') {
+                pac_renderizarPortal();
+            } else if (idVista === 'vista-intervencion') {
+                int_refrescarContadorGlobal();
+            }
+        }
+
+        function volverAlInicio() {
+            if (app_rolActivo === 'clinico') {
+                cambiarVista('vista-panel-clinico');
+            } else {
+                cambiarVista('vista-portal-paciente');
+            }
+        }
+
+        // =========================================================================
+        // ACCESIBILIDAD Y NOTIFICACIONES TOAST (SIN ALERT/CONFIRM)
+        // =========================================================================
+        function setFontScale(scaleClass, btnEl) {
+            document.body.classList.remove('scale-a1', 'scale-a2', 'scale-a3');
+            document.body.classList.add(scaleClass);
+            document.querySelectorAll('.font-btn').forEach(b => {
+                b.classList.remove('bg-sage', 'text-white');
+                b.classList.add('text-teal-100');
+            });
+            btnEl.classList.add('bg-sage', 'text-white');
+            btnEl.classList.remove('text-teal-100');
+        }
+
+        function mostrarToast(mensaje, tipo = 'info') {
+            const toast = document.getElementById('global-toast');
+            const msgEl = document.getElementById('global-toast-msg');
+            const iconEl = document.getElementById('global-toast-icon');
+            msgEl.textContent = mensaje;
+            iconEl.className = 'w-3 h-3 rounded-full shrink-0 ' + (tipo === 'error' ? 'bg-rose-500' : 'bg-sage');
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3500);
+        }
+
+        function actualizarBadgeRol() {
+            const badge = document.getElementById('badge-rol-activo');
+            if (!app_rolActivo) {
+                badge.classList.add('hidden');
+                return;
+            }
+            badge.classList.remove('hidden');
+            badge.textContent = app_rolActivo === 'clinico' ? 'Rol: Clínico Autorizado' : 'Rol: Paciente';
+        }
+
+        // =========================================================================
+        // CONTROL DE ACCESO: PIN CLÍNICO Y ROL PACIENTE
+        // =========================================================================
+        function pinDigito(d) {
+            if (app_pinBuffer.length >= 4) return;
+            app_pinBuffer += d;
+            actualizarDotsPIN();
+            document.getElementById('pin-error-msg').textContent = '';
+            if (app_pinBuffer.length === 4) {
+                setTimeout(pinValidar, 150);
+            }
+        }
+
+        function pinLimpiar() {
+            app_pinBuffer = '';
+            actualizarDotsPIN();
+            document.getElementById('pin-error-msg').textContent = '';
+        }
+
+        function actualizarDotsPIN() {
+            const dots = document.querySelectorAll('#pin-dots span');
+            dots.forEach((dot, idx) => {
+                if (idx < app_pinBuffer.length) {
+                    dot.classList.remove('bg-white');
+                    dot.classList.add('bg-petrol');
+                } else {
+                    dot.classList.add('bg-white');
+                    dot.classList.remove('bg-petrol');
+                }
+            });
+        }
+
+        function pinValidar() {
+            const pinGuardado = localStorage.getItem(STORAGE_KEYS.PIN) || '1234';
+            if (app_pinBuffer === pinGuardado) {
+                app_pinBuffer = '';
+                actualizarDotsPIN();
+                app_rolActivo = 'clinico';
+                actualizarBadgeRol();
+                mostrarToast('Sesión clínica iniciada correctamente.');
+                cambiarVista('vista-panel-clinico');
+            } else {
+                document.getElementById('pin-error-msg').textContent = 'PIN incorrecto. Intente nuevamente.';
+                app_pinBuffer = '';
+                actualizarDotsPIN();
+            }
+        }
+
+        function iniciarComoPaciente(bloqueadoPorURL) {
+            app_rolActivo = 'paciente';
+            actualizarBadgeRol();
+            const btnSalir = document.getElementById('btn-salir-portal-paciente');
+            if (bloqueadoPorURL || app_modoBloqueadoURL) {
+                btnSalir.classList.add('hidden');
+            } else {
+                btnSalir.classList.remove('hidden');
+            }
+            cambiarVista('vista-portal-paciente');
+        }
+
+        function salirPortalPaciente() {
+            if (app_modoBloqueadoURL) return;
+            app_rolActivo = null;
+            actualizarBadgeRol();
+            cambiarVista('vista-bienvenida');
+        }
+
+        // =========================================================================
+        // PANEL CLÍNICO (PREFIJO cli_)
+        // =========================================================================
+        function cli_bloquearSesion() {
+            app_rolActivo = null;
+            app_pinBuffer = '';
+            actualizarDotsPIN();
+            actualizarBadgeRol();
+            mostrarToast('Sesión clínica bloqueada.');
+            cambiarVista('vista-bienvenida');
+        }
+
+        function cli_copiarEnlacePaciente() {
+            const urlPaciente = window.location.origin + window.location.pathname + '?modo=paciente';
+            const tempInput = document.createElement('input');
+            tempInput.value = urlPaciente;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand('copy');
+                mostrarToast('Enlace para paciente copiado al portapapeles.');
+            } catch (err) {
+                mostrarToast('Enlace generado: ' + urlPaciente);
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        function cli_guardarRuta(ruta) {
+            localStorage.setItem(STORAGE_KEYS.RUTA, ruta);
+            cli_actualizarEstilosRuta(ruta);
+            mostrarToast('Ruta de inicio del paciente actualizada.');
+        }
+
+        function cli_actualizarEstilosRuta(rutaActiva) {
+            ['evaluacion_basal', 'intervencion_directa', 'acceso_libre'].forEach(r => {
+                const lbl = document.getElementById('lbl-ruta-' + r);
+                const radio = lbl.querySelector('input[type="radio"]');
+                if (r === rutaActiva) {
+                    lbl.classList.add('border-petrol', 'bg-teal-50/40');
+                    lbl.classList.remove('border-slate-200');
+                    radio.checked = true;
+                } else {
+                    lbl.classList.remove('border-petrol', 'bg-teal-50/40');
+                    lbl.classList.add('border-slate-200');
+                    radio.checked = false;
+                }
+            });
+        }
+
+        function cli_actualizarPin() {
+            const val = document.getElementById('cli-nuevo-pin').value.trim();
+            if (!/^\d{4}$/.test(val)) {
+                mostrarToast('El PIN debe tener exactamente 4 dígitos numéricos.', 'error');
+                return;
+            }
+            localStorage.setItem(STORAGE_KEYS.PIN, val);
+            document.getElementById('cli-nuevo-pin').value = '';
+            mostrarToast('PIN clínico actualizado con éxito.');
+        }
+
+        function cli_previsualizarPortalPaciente() {
+            app_rolActivo = 'paciente';
+            actualizarBadgeRol();
+            const btnSalir = document.getElementById('btn-salir-portal-paciente');
+            btnSalir.classList.remove('hidden');
+            btnSalir.textContent = '← Volver al Panel Clínico';
+            btnSalir.onclick = () => {
+                app_rolActivo = 'clinico';
+                actualizarBadgeRol();
+                btnSalir.textContent = 'Cambiar Perfil';
+                btnSalir.onclick = salirPortalPaciente;
+                cambiarVista('vista-panel-clinico');
+            };
+            cambiarVista('vista-portal-paciente');
+        }
+
+        function cli_resetearEvaluaciones() {
+            localStorage.removeItem(STORAGE_KEYS.COG);
+            localStorage.removeItem(STORAGE_KEYS.MOT);
+            localStorage.removeItem(STORAGE_KEYS.LEN);
+            localStorage.removeItem(STORAGE_KEYS.INT);
+            cli_refrescarDashboard();
+            mostrarToast('Registros evaluativos reiniciados.');
+        }
+
+        function obtenerDatosBasales() {
+            const cog = JSON.parse(localStorage.getItem(STORAGE_KEYS.COG) || 'null');
+            const mot = JSON.parse(localStorage.getItem(STORAGE_KEYS.MOT) || 'null');
+            const len = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEN) || 'null');
+            const intData = JSON.parse(localStorage.getItem(STORAGE_KEYS.INT) || '{"sesiones":[]}');
+            return { cog, mot, len, intData };
+        }
+
+        function cli_refrescarDashboard() {
+            const ruta = localStorage.getItem(STORAGE_KEYS.RUTA) || 'evaluacion_basal';
+            cli_actualizarEstilosRuta(ruta);
+
+            const { cog, mot, len, intData } = obtenerDatosBasales();
+
+            // Cognitiva
+            if (cog) {
+                document.getElementById('cli-badge-cog').textContent = 'Completada';
+                document.getElementById('cli-badge-cog').className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800';
+                document.getElementById('cli-resumen-cog').textContent = `Global: ${cog.porcentaje}% (${cog.bruto}/${cog.maximo} pts) — ${cog.interpretacion}`;
+                document.getElementById('cli-bar-cog').style.width = cog.porcentaje + '%';
+            } else {
+                document.getElementById('cli-badge-cog').textContent = 'Pendiente';
+                document.getElementById('cli-badge-cog').className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800';
+                document.getElementById('cli-resumen-cog').textContent = 'Sin evaluación basal registrada.';
+                document.getElementById('cli-bar-cog').style.width = '0%';
+            }
+
+            // Motora
+            if (mot) {
+                document.getElementById('cli-badge-mot').textContent = 'Completada';
+                document.getElementById('cli-badge-mot').className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800';
+                document.getElementById('cli-resumen-mot').textContent = `Global: ${mot.porcentaje}% — Kapandji ${mot.kapandji}/10 | FM ${mot.fuglMeyer}/66 | ARAT ${mot.arat}/9`;
+                document.getElementById('cli-bar-mot').style.width = mot.porcentaje + '%';
+            } else {
+                document.getElementById('cli-badge-mot').textContent = 'Pendiente';
+                document.getElementById('cli-badge-mot').className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800';
+                document.getElementById('cli-resumen-mot').textContent = 'Sin evaluación basal registrada.';
+                document.getElementById('cli-bar-mot').style.width = '0%';
+            }
+
+            // Lenguaje
+            if (len) {
+                document.getElementById('cli-badge-len').textContent = 'Completada';
+                document.getElementById('cli-badge-len').className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800';
+                document.getElementById('cli-resumen-len').textContent = `Global: ${len.porcentaje}% (${len.bruto}/${len.maximo} pts) — ${len.severidad}`;
+                document.getElementById('cli-bar-len').style.width = len.porcentaje + '%';
+            } else {
+                document.getElementById('cli-badge-len').textContent = 'Pendiente';
+                document.getElementById('cli-badge-len').className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800';
+                document.getElementById('cli-resumen-len').textContent = 'Sin evaluación basal registrada.';
+                document.getElementById('cli-bar-len').style.width = '0%';
+            }
+
+            // Stats Intervención
+            const totalSesiones = (intData.sesiones || []).length;
+            document.getElementById('cli-stats-intervencion').textContent = `${totalSesiones} actividades terapéuticas completadas en el historial.`;
+
+            // Tabla comparativa de sub-escalas
+            const tbody = document.getElementById('cli-tabla-subescalas');
+            const filas = [
+                {
+                    area: 'Cognitiva: Orientación & Cálculo (MMSE)',
+                    bruto: cog ? `${cog.subescalas.mmse} / 9` : '—',
+                    pct: cog ? `${Math.round((cog.subescalas.mmse / 9) * 100)}%` : 'Pendiente',
+                    interp: cog ? cog.interpretacion : 'Sin datos'
+                },
+                {
+                    area: 'Cognitiva: Memoria & TMT-B (MoCA)',
+                    bruto: cog ? `${cog.subescalas.moca} / 9` : '—',
+                    pct: cog ? `${Math.round((cog.subescalas.moca / 9) * 100)}%` : 'Pendiente',
+                    interp: cog ? (cog.subescalas.moca >= 7 ? 'Conservado' : 'Déficit ejecutivo/mnésico') : 'Sin datos'
+                },
+                {
+                    area: 'Cognitiva: Inhibición Go/No-Go (FAB)',
+                    bruto: cog ? `${cog.subescalas.fab} / 10` : '—',
+                    pct: cog ? `${Math.round((cog.subescalas.fab / 10) * 100)}%` : 'Pendiente',
+                    interp: cog ? (cog.subescalas.fab >= 8 ? 'Control frontal adecuado' : 'Impulsividad / Déficit inhib.') : 'Sin datos'
+                },
+                {
+                    area: 'Motora: Oposición Pulgar (Kapandji)',
+                    bruto: mot ? `${mot.kapandji} / 10` : '—',
+                    pct: mot ? `${mot.kapandji * 10}%` : 'Pendiente',
+                    interp: mot ? (mot.kapandji >= 8 ? 'Oposición funcional' : 'Limitación oposición') : 'Sin datos'
+                },
+                {
+                    area: 'Motora: Extremidad Superior (Fugl-Meyer)',
+                    bruto: mot ? `${mot.fuglMeyer} / 66` : '—',
+                    pct: mot ? `${Math.round((mot.fuglMeyer / 66) * 100)}%` : 'Pendiente',
+                    interp: mot ? mot.interpretacion : 'Sin datos'
+                },
+                {
+                    area: 'Motora: Destreza Manual (ARAT)',
+                    bruto: mot ? `${mot.arat} / 9` : '—',
+                    pct: mot ? `${Math.round((mot.arat / 9) * 100)}%` : 'Pendiente',
+                    interp: mot ? (mot.arat >= 7 ? 'Pinza/agarre funcional' : 'Compromiso manipulativo') : 'Sin datos'
+                },
+                {
+                    area: 'Lenguaje: Prueba Rápida de Afasia (ART)',
+                    bruto: len ? `${len.bruto} / ${len.maximo}` : '—',
+                    pct: len ? `${len.porcentaje}%` : 'Pendiente',
+                    interp: len ? len.severidad : 'Sin datos'
+                }
+            ];
+
+            tbody.innerHTML = filas.map(f => `
+                <tr>
+                    <td class="py-3 px-2 font-semibold text-slate-800">${f.area}</td>
+                    <td class="py-3 px-2 font-bold text-petrol">${f.bruto}</td>
+                    <td class="py-3 px-2"><span class="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-xs">${f.pct}</span></td>
+                    <td class="py-3 px-2 text-xs text-slate-600">${f.interp}</td>
+                </tr>
+            `).join('');
+
+            // Gráfico Radar Chart.js
+            cli_renderRadarChart(
+                cog ? cog.porcentaje : 0,
+                mot ? mot.porcentaje : 0,
+                len ? len.porcentaje : 0
+            );
+        }
+
+        function cli_renderRadarChart(valCog, valMot, valLen) {
+            const ctx = document.getElementById('cli-radar-chart').getContext('2d');
+            if (cli_radarInstance) {
+                cli_radarInstance.destroy();
+            }
+            cli_radarInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Cognitiva (MMSE/MoCA/FAB)', 'Motora (Kapandji/FM/ARAT)', 'Lenguaje (ART)'],
+                    datasets: [{
+                        label: 'Rendimiento Basal (%)',
+                        data: [valCog, valMot, valLen],
+                        backgroundColor: 'rgba(42, 157, 143, 0.25)',
+                        borderColor: '#0F4C5C',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#2A9D8F',
+                        pointBorderColor: '#fff',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: { stepSize: 20, backdropColor: 'transparent' },
+                            pointLabels: { font: { size: 12, weight: 'bold' }, color: '#1E293B' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function cli_exportarCSV() {
+            const { cog, mot, len, intData } = obtenerDatosBasales();
+            const fecha = new Date().toLocaleDateString('es-CL');
+            let csv = 'Fecha,Dominio,Subescala,Puntaje_Bruto,Puntaje_Maximo,Porcentaje,Interpretacion\n';
+            csv += `${fecha},Cognitiva,Global MMSE/MoCA/FAB,${cog ? cog.bruto : 0},${cog ? cog.maximo : 28},${cog ? cog.porcentaje : 0}%,${cog ? cog.interpretacion : 'Pendiente'}\n`;
+            csv += `${fecha},Motora,Kapandji,${mot ? mot.kapandji : 0},10,${mot ? mot.kapandji * 10 : 0}%,Oposicion Pulgar\n`;
+            csv += `${fecha},Motora,Fugl-Meyer EESS,${mot ? mot.fuglMeyer : 0},66,${mot ? Math.round((mot.fuglMeyer/66)*100) : 0}%,${mot ? mot.interpretacion : 'Pendiente'}\n`;
+            csv += `${fecha},Motora,ARAT,${mot ? mot.arat : 0},9,${mot ? Math.round((mot.arat/9)*100) : 0}%,Destreza Manual\n`;
+            csv += `${fecha},Lenguaje,ART Global,${len ? len.bruto : 0},${len ? len.maximo : 18},${len ? len.porcentaje : 0}%,${len ? len.severidad : 'Pendiente'}\n`;
+            csv += `${fecha},Intervencion,Sesiones Completadas,${(intData.sesiones || []).length},N/A,100%,Registro Multimodal\n`;
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Informe_Evaluacion_Basal.csv';
+            link.click();
+            mostrarToast('Archivo Informe_Evaluacion_Basal.csv descargado.');
+        }
+
+        // =========================================================================
+        // PORTAL DEL PACIENTE (RENDERIZADO SEGÚN neuro_ruta_activa)
+        // =========================================================================
+        function pac_renderizarPortal() {
+            const ruta = localStorage.getItem(STORAGE_KEYS.RUTA) || 'evaluacion_basal';
+            const { cog, mot, len } = obtenerDatosBasales();
+            const completadas = [cog, mot, len].filter(Boolean).length;
+            const contenedor = document.getElementById('pac-contenido-dinamico');
+            const tagRuta = document.getElementById('pac-tag-ruta');
+            const instRuta = document.getElementById('pac-instruccion-ruta');
+
+            const bloqueEvaluaciones = `
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-6">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900">Evaluación Inicial Basal (${completadas}/3 completadas)</h3>
+                            <p class="text-sm text-slate-500">Complete las tres evaluaciones para generar su perfil neurofuncional.</p>
+                        </div>
+                        <span class="px-4 py-1.5 rounded-full text-xs font-extrabold ${completadas === 3 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                            Progreso: ${completadas} de 3
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button type="button" onclick="cambiarVista('vista-eval-cognitiva')" class="btn-touch p-5 rounded-2xl border-2 ${cog ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 hover:border-petrol'} text-left flex flex-col justify-between">
+                            <div class="flex justify-between items-center w-full mb-2">
+                                <span class="font-bold text-petrol">1. Evaluación Cognitiva</span>
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full ${cog ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}">${cog ? '✓ Lista' : 'Iniciar'}</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Memoria, atención y flexibilidad mental.</p>
+                        </button>
+
+                        <button type="button" onclick="cambiarVista('vista-eval-motora')" class="btn-touch p-5 rounded-2xl border-2 ${mot ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 hover:border-petrol'} text-left flex flex-col justify-between">
+                            <div class="flex justify-between items-center w-full mb-2">
+                                <span class="font-bold text-petrol">2. Evaluación Motora</span>
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full ${mot ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}">${mot ? '✓ Lista' : 'Iniciar'}</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Movilidad de mano, brazo y pinza fina.</p>
+                        </button>
+
+                        <button type="button" onclick="cambiarVista('vista-eval-lenguaje')" class="btn-touch p-5 rounded-2xl border-2 ${len ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-200 hover:border-petrol'} text-left flex flex-col justify-between">
+                            <div class="flex justify-between items-center w-full mb-2">
+                                <span class="font-bold text-petrol">3. Evaluación Lenguaje</span>
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full ${len ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}">${len ? '✓ Lista' : 'Iniciar'}</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Comprensión, denominación y fluencia verbal.</p>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const bloqueIntervencion = (bloqueado) => `
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8 ${bloqueado ? 'opacity-75' : ''}">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900">Ejercicios de Rehabilitación Terapéutica</h3>
+                            <p class="text-sm text-slate-500">${bloqueado ? '🔒 Complete las 3 evaluaciones basales anteriores para desbloquear sus terapias.' : 'Seleccione el área que desea entrenar hoy:'}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button type="button" ${bloqueado ? 'disabled' : `onclick="int_abrirAreaDirecta('cognitiva')"`} class="btn-touch p-6 rounded-2xl bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 border border-indigo-200 text-left">
+                            <span class="text-2xl block mb-2">🧠</span>
+                            <h4 class="font-bold text-indigo-950 text-lg">Entrenamiento Cognitivo</h4>
+                            <p class="text-xs text-indigo-800 mt-1">Atención, memoria diaria y planificación.</p>
+                        </button>
+                        <button type="button" ${bloqueado ? 'disabled' : `onclick="int_abrirAreaDirecta('motora')"`} class="btn-touch p-6 rounded-2xl bg-emerald-50 hover:bg-emerald-100 disabled:opacity-50 border border-emerald-200 text-left">
+                            <span class="text-2xl block mb-2">🦾</span>
+                            <h4 class="font-bold text-emerald-950 text-lg">Entrenamiento Motor</h4>
+                            <p class="text-xs text-emerald-800 mt-1">Series guiadas de brazo y destreza manual.</p>
+                        </button>
+                        <button type="button" ${bloqueado ? 'disabled' : `onclick="int_abrirAreaDirecta('lenguaje')"`} class="btn-touch p-6 rounded-2xl bg-sky-50 hover:bg-sky-100 disabled:opacity-50 border border-sky-200 text-left">
+                            <span class="text-2xl block mb-2">🗣️</span>
+                            <h4 class="font-bold text-sky-950 text-lg">Entrenamiento de Lenguaje</h4>
+                            <p class="text-xs text-sky-800 mt-1">Denominación asistida con pistas graduales.</p>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            if (ruta === 'evaluacion_basal') {
+                tagRuta.textContent = 'Ruta: Evaluación Basal Inicial';
+                instRuta.textContent = completadas < 3
+                    ? 'Por indicación clínica, primero completa tus 3 evaluaciones iniciales para habilitar tus ejercicios.'
+                    : '¡Excelente! Ya completaste tus 3 evaluaciones basales. Tus ejercicios terapéuticos están desbloqueados.';
+                contenedor.innerHTML = bloqueEvaluaciones + bloqueIntervencion(completadas < 3);
+            } else if (ruta === 'intervencion_directa') {
+                tagRuta.textContent = 'Ruta: Intervención Terapéutica Directa';
+                instRuta.textContent = 'Tu equipo clínico ha habilitado el acceso directo a tus ejercicios diarios de rehabilitación.';
+                contenedor.innerHTML = bloqueIntervencion(false);
+            } else {
+                tagRuta.textContent = 'Ruta: Acceso Libre Integral';
+                instRuta.textContent = 'Puedes realizar tus evaluaciones basales o practicar directamente en los módulos de rehabilitación.';
+                contenedor.innerHTML = bloqueIntervencion(false) + bloqueEvaluaciones;
+            }
+        }
+
+        // =========================================================================
+        // MÓDULO EVALUACIÓN COGNITIVA (PREFIJO cog_)
+        // =========================================================================
+        let cog_tmtObjetivo = ['1', 'A', '2', 'B', '3', 'C', '4', 'D'];
+        let cog_tmtMarcados = [];
+        let cog_gngEnsayo = 0;
+        let cog_gngAciertos = 0;
+        let cog_gngTipoActual = null; // 'GO' | 'NOGO'
+        let cog_gngRespondido = false;
+
+        function cog_irPaso(num) {
+            document.querySelectorAll('.cog-step').forEach(el => el.classList.add('hidden'));
+            document.getElementById('cog-step-' + num).classList.remove('hidden');
+            const titulos = {
+                1: 'Paso 1 de 5: Orientación Temporal y Espacial (MMSE)',
+                2: 'Paso 2 de 5: Codificación MoCA y Resta Serial 7 (MMSE)',
+                3: 'Paso 3 de 5: Alternancia Ejecutiva TMT-B Digital (MoCA)',
+                4: 'Paso 4 de 5: Control Inhibitorio Go / No-Go (FAB)',
+                5: 'Paso 5 de 5: Recuerdo Diferido sin Pistas (MoCA)'
+            };
+            document.getElementById('cog-paso-titulo').textContent = titulos[num];
+            document.getElementById('cog-paso-badge').textContent = `${num} / 5`;
+        }
+
+        function cog_initTMT() {
+            const nodos = ['1', 'A', '2', 'B', '3', 'C', '4', 'D'].sort(() => Math.random() - 0.5);
+            const grid = document.getElementById('cog-tmt-grid');
+            cog_tmtMarcados = [];
+            document.getElementById('cog-tmt-secuencia').textContent = 'Ninguna';
+            grid.innerHTML = nodos.map(n => `
+                <button type="button" onclick="cog_tocarNodoTMT(this, '${n}')" class="cog-tmt-btn btn-touch h-16 rounded-2xl bg-white border-2 border-petrol font-extrabold text-xl text-petrol shadow-sm hover:bg-teal-50">
+                    ${n}
+                </button>
+            `).join('');
+        }
+
+        function cog_reiniciarTMT() {
+            cog_initTMT();
+        }
+
+        function cog_tocarNodoTMT(btn, valor) {
+            const esperado = cog_tmtObjetivo[cog_tmtMarcados.length];
+            if (valor === esperado) {
+                cog_tmtMarcados.push(valor);
+                btn.disabled = true;
+                btn.classList.remove('bg-white', 'text-petrol');
+                btn.classList.add('bg-sage', 'text-white', 'border-sage');
+                document.getElementById('cog-tmt-secuencia').textContent = cog_tmtMarcados.join(' → ');
+            } else {
+                mostrarToast(`Orden incorrecto. Busque el nodo: ${esperado}`, 'error');
+            }
+        }
+
+        function cog_iniciarGoNoGo() {
+            cog_gngEnsayo = 0;
+            cog_gngAciertos = 0;
+            document.getElementById('cog-gng-start-btn').disabled = true;
+            document.getElementById('cog-gng-tap-btn').disabled = false;
+            cog_siguienteEnsayoGoNoGo();
+        }
+
+        function cog_siguienteEnsayoGoNoGo() {
+            if (cog_gngEnsayo >= 10) {
+                document.getElementById('cog-gng-estimulo').textContent = '✓';
+                document.getElementById('cog-gng-estimulo').className = 'w-28 h-28 rounded-full bg-emerald-600 flex items-center justify-center text-4xl font-black mb-6';
+                document.getElementById('cog-gng-status').textContent = `Completado: ${cog_gngAciertos} / 10 aciertos`;
+                document.getElementById('cog-gng-tap-btn').disabled = true;
+                document.getElementById('cog-gng-start-btn').disabled = false;
+                return;
+            }
+
+            cog_gngEnsayo++;
+            cog_gngRespondido = false;
+            cog_gngTipoActual = Math.random() > 0.35 ? 'GO' : 'NOGO';
+            const est = document.getElementById('cog-gng-estimulo');
+            document.getElementById('cog-gng-status').textContent = `Ensayo ${cog_gngEnsayo} / 10`;
+
+            if (cog_gngTipoActual === 'GO') {
+                est.textContent = '●';
+                est.className = 'w-28 h-28 rounded-full bg-emerald-500 text-white flex items-center justify-center text-5xl font-black mb-6 shadow-lg';
+            } else {
+                est.textContent = '✕';
+                est.className = 'w-28 h-28 rounded-full bg-rose-600 text-white flex items-center justify-center text-5xl font-black mb-6 shadow-lg';
+            }
+
+            const tId = setTimeout(() => {
+                if (!cog_gngRespondido && cog_gngTipoActual === 'NOGO') {
+                    cog_gngAciertos++;
+                }
+                cog_siguienteEnsayoGoNoGo();
+            }, 1300);
+            app_activeTimeouts.push(tId);
+        }
+
+        function cog_registrarTapGoNoGo() {
+            if (cog_gngRespondido || cog_gngEnsayo === 0) return;
+            cog_gngRespondido = true;
+            if (cog_gngTipoActual === 'GO') {
+                cog_gngAciertos++;
+                mostrarToast('¡Bien! Respuesta GO correcta.');
+            } else {
+                mostrarToast('Error de inhibición (estímulo NO-GO).', 'error');
+            }
+        }
+
+        function cog_initMemoriaOpciones() {
+            const palabras = ['ROSTRO', 'MANZANA', 'SEDA', 'MARTILLO', 'IGLESIA', 'CLAVEL', 'PERRO', 'ROJO', 'SILLA'];
+            const cont = document.getElementById('cog-memoria-opciones');
+            cont.innerHTML = palabras.map(p => `
+                <label class="cursor-pointer p-3.5 rounded-2xl border-2 border-slate-200 hover:border-petrol flex items-center gap-3 font-bold text-sm">
+                    <input type="checkbox" value="${p}" class="cog-mem-chk w-5 h-5 accent-petrol">
+                    <span>${p}</span>
+                </label>
+            `).join('');
+        }
+
+        function cog_finalizarEvaluacion() {
+            // 1. MMSE Orientación (4 pts) + Resta Serial 7 (5 pts) = 9 pts
+            let ptsOrientacion = 0;
+            if (document.getElementById('cog-q-anio').value === '2026') ptsOrientacion++;
+            if (document.getElementById('cog-q-dia').value === 'Jueves') ptsOrientacion++;
+            if (document.getElementById('cog-q-mes').value === 'Noviembre') ptsOrientacion++;
+            if (document.getElementById('cog-q-lugar').value === 'correcto') ptsOrientacion++;
+
+            const esperadosSub = [93, 86, 79, 72, 65];
+            let ptsResta = 0;
+            esperadosSub.forEach((esp, i) => {
+                const val = parseInt(document.getElementById('cog-sub-' + (i + 1)).value, 10);
+                if (val === esp) ptsResta++;
+            });
+            const mmseTotal = ptsOrientacion + ptsResta; // max 9
+
+            // 2. MoCA TMT-B (4 pts) + Memoria Diferida (5 pts) = 9 pts
+            const tmtPts = Math.round((cog_tmtMarcados.length / 8) * 4);
+            const targetPalabras = ['ROSTRO', 'SEDA', 'IGLESIA', 'CLAVEL', 'ROJO'];
+            let memPts = 0;
+            document.querySelectorAll('.cog-mem-chk:checked').forEach(chk => {
+                if (targetPalabras.includes(chk.value)) memPts++;
+            });
+            const mocaTotal = tmtPts + Math.min(5, memPts); // max 9
+
+            // 3. FAB Go/No-Go (max 10 pts)
+            const fabTotal = cog_gngEnsayo > 0 ? cog_gngAciertos : 7;
+
+            const bruto = mmseTotal + mocaTotal + fabTotal; // max 28
+            const maximo = 28;
+            const porcentaje = Math.round((bruto / maximo) * 100);
+            const interpretacion = porcentaje >= 80 ? 'Rendimiento Cognitivo Preservado'
+                : porcentaje >= 55 ? 'Deterioro Cognitivo Leve / Ejecutivo'
+                : 'Compromiso Cognitivo Moderado-Severo';
+
+            const payload = {
+                fecha: new Date().toISOString(),
+                bruto,
+                maximo,
+                porcentaje,
+                interpretacion,
+                subescalas: { mmse: mmseTotal, moca: mocaTotal, fab: fabTotal }
+            };
+
+            localStorage.setItem(STORAGE_KEYS.COG, JSON.stringify(payload));
+            mostrarToast(`Evaluación Cognitiva guardada (${porcentaje}%).`);
+            volverAlInicio();
+        }
+
+        // =========================================================================
+        // MÓDULO EVALUACIÓN MOTORA (PREFIJO mot_)
+        // =========================================================================
+        const MOT_KAPANDJI_DESCS = [
+            '0: Sin oposición',
+            '1: Falange proximal dedo índice',
+            '2: Falange media dedo índice',
+            '3: Pulpejo dedo índice',
+            '4: Pulpejo dedo medio',
+            '5: Pulpejo dedo anular',
+            '6: Pulpejo dedo meñique',
+            '7: Pliegue interfalángico distal meñique',
+            '8: Pliegue interfalángico proximal meñique',
+            '9: Pliegue metacarpofalángico meñique',
+            '10: Pliegue palmar distal (Oposición completa)'
+        ];
+
+        function mot_actualizarKapandji(val) {
+            const n = parseInt(val, 10);
+            document.getElementById('mot-kapandji-val').textContent = n;
+            document.getElementById('mot-kapandji-desc').textContent = MOT_KAPANDJI_DESCS[n] || '';
+        }
+
+        function mot_setKapandji(val) {
+            document.getElementById('mot-kapandji-slider').value = val;
+            mot_actualizarKapandji(val);
+        }
+
+        async function mot_toggleCamara() {
+            const wrapper = document.getElementById('mot-camara-wrapper');
+            const video = document.getElementById('mot-video');
+            const btn = document.getElementById('mot-btn-camara');
+
+            if (!wrapper.classList.contains('hidden')) {
+                app_activeStreams.forEach(s => s.getTracks().forEach(t => t.stop()));
+                app_activeStreams = [];
+                video.srcObject = null;
+                wrapper.classList.add('hidden');
+                btn.textContent = 'Activar Cámara Clínica';
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                app_activeStreams.push(stream);
+                video.srcObject = stream;
+                wrapper.classList.remove('hidden');
+                btn.textContent = 'Detener Cámara';
+                mot_dibujarZonasOverlay();
+            } catch (err) {
+                mostrarToast('Cámara no disponible. Utilice los controles clínicos manuales.', 'error');
+            }
+        }
+
+        function mot_dibujarZonasOverlay() {
+            const canvas = document.getElementById('mot-overlay-canvas');
+            const ctx = canvas.getContext('2d');
+            function renderLoop() {
+                if (!canvas.offsetParent) return;
+                canvas.width = canvas.clientWidth;
+                canvas.height = canvas.clientHeight;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#2A9D8F';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([8, 6]);
+                ctx.strokeRect(canvas.width * 0.2, canvas.height * 0.15, canvas.width * 0.6, canvas.height * 0.7);
+                app_activeRAF = requestAnimationFrame(renderLoop);
+            }
+            app_activeRAF = requestAnimationFrame(renderLoop);
+        }
+
+        function mot_iniciarHoldPostural() {
+            let restante = 3.0;
+            const timerEl = document.getElementById('mot-fm-timer');
+            const btn = document.getElementById('mot-fm-hold-btn');
+            btn.disabled = true;
+            const iv = setInterval(() => {
+                restante = Math.max(0, restante - 0.1);
+                timerEl.textContent = restante.toFixed(1) + ' s';
+                if (restante <= 0) {
+                    clearInterval(iv);
+                    btn.disabled = false;
+                    timerEl.textContent = '3.0 s ✓';
+                    mostrarToast('Postura sostenida 3.0s validada.');
+                }
+            }, 100);
+            app_activeIntervals.push(iv);
+        }
+
+        function mot_finalizarEvaluacion() {
+            const kapandji = parseInt(document.getElementById('mot-kapandji-slider').value, 10) || 0;
+            const fuglMeyer = Math.min(66, Math.max(0, parseInt(document.getElementById('mot-fm-score').value, 10) || 0));
+            const arat = (parseInt(document.getElementById('mot-arat-1').value, 10) || 0)
+                       + (parseInt(document.getElementById('mot-arat-2').value, 10) || 0)
+                       + (parseInt(document.getElementById('mot-arat-3').value, 10) || 0);
+
+            const pctKap = (kapandji / 10) * 100;
+            const pctFM = (fuglMeyer / 66) * 100;
+            const pctArat = (arat / 9) * 100;
+            const porcentaje = Math.round((pctKap + pctFM + pctArat) / 3);
+
+            const interpretacion = fuglMeyer >= 50 ? 'Compromiso Motor Leve'
+                : fuglMeyer >= 30 ? 'Compromiso Motor Moderado'
+                : 'Compromiso Motor Severo';
+
+            const payload = {
+                fecha: new Date().toISOString(),
+                kapandji,
+                fuglMeyer,
+                arat,
+                porcentaje,
+                interpretacion
+            };
+
+            localStorage.setItem(STORAGE_KEYS.MOT, JSON.stringify(payload));
+            mostrarToast(`Evaluación Motora guardada (${porcentaje}%).`);
+            volverAlInicio();
+        }
+
+        // =========================================================================
+        // MÓDULO EVALUACIÓN DE LENGUAJE ART (PREFIJO len_)
+        // =========================================================================
+        let len_ordenSecuencia = [];
+        let len_denomAciertos = 0;
+        let len_denomEnsayo = 0;
+        let len_fluenciaCount = 0;
+
+        function len_hablarTexto(texto) {
+            if (!('speechSynthesis' in window)) {
+                mostrarToast('Síntesis de voz no soportada en este navegador.', 'error');
+                return;
+            }
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(texto);
+            utter.lang = 'es-ES';
+            utter.rate = 0.92;
+            window.speechSynthesis.speak(utter);
+        }
+
+        function len_reproducirOrdenTTS() {
+            len_hablarTexto('Toque primero el círculo azul y después el cuadrado verde');
+        }
+
+        function len_marcarFigura(fig) {
+            if (len_ordenSecuencia.length >= 2) len_ordenSecuencia = [];
+            len_ordenSecuencia.push(fig);
+            document.getElementById('len-comprension-feedback').textContent = 'Secuencia tocada: ' + len_ordenSecuencia.join(' → ');
+        }
+
+        function len_iniciarReconocimientoVoz() {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) {
+                mostrarToast('Reconocimiento de voz no disponible. Use los botones clínicos de validación.', 'error');
+                return;
+            }
+            const rec = new SpeechRec();
+            app_activeSpeechRecognition = rec;
+            rec.lang = 'es-ES';
+            rec.interimResults = false;
+            document.getElementById('len-speech-transcript').textContent = 'Escuchando paciente...';
+
+            rec.onresult = (event) => {
+                const texto = event.results[0][0].transcript;
+                document.getElementById('len-speech-transcript').textContent = `Transcripción: "${texto}"`;
+                if (/reloj|hora|llave|taza/i.test(texto)) {
+                    len_registrarDenominacion(true);
+                }
+            };
+            rec.onerror = () => {
+                document.getElementById('len-speech-transcript').textContent = 'No se captó audio claro. Valide manualmente.';
+            };
+            rec.start();
+        }
+
+        function len_registrarDenominacion(acierto) {
+            len_denomEnsayo++;
+            if (acierto) len_denomAciertos++;
+            const estimulos = [
+                { label: 'Estímulo Visual #2: Llave', path: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
+                { label: 'Estímulo Visual #3: Sol / Clima', path: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' }
+            ];
+            if (len_denomEnsayo < 3) {
+                const next = estimulos[len_denomEnsayo - 1];
+                document.getElementById('len-denom-pista').textContent = next.label;
+                document.getElementById('len-denom-svg').innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="${next.path}"></path>`;
+                mostrarToast(`Denominación registrada (${len_denomAciertos}/${len_denomEnsayo}).`);
+            } else {
+                document.getElementById('len-denom-pista').textContent = `Serie completada (${Math.min(3, len_denomAciertos)}/3)`;
+                mostrarToast('Sub-prueba de denominación completada.');
+            }
+        }
+
+        function len_iniciarTimerFluencia() {
+            len_fluenciaCount = 0;
+            document.getElementById('len-fluencia-count').textContent = '0';
+            let seg = 60;
+            const timerEl = document.getElementById('len-fluencia-timer');
+            const iv = setInterval(() => {
+                seg--;
+                timerEl.textContent = seg + 's';
+                if (seg <= 0) {
+                    clearInterval(iv);
+                    mostrarToast('Tiempo de fluencia semántica finalizado.');
+                }
+            }, 1000);
+            app_activeIntervals.push(iv);
+        }
+
+        function len_sumarPalabraFluencia() {
+            len_fluenciaCount++;
+            document.getElementById('len-fluencia-count').textContent = len_fluenciaCount;
+        }
+
+        function len_finalizarEvaluacion() {
+            // Comprensión (hasta 4 pts)
+            let ptsComp = 0;
+            if (len_ordenSecuencia[0] === 'circulo_azul') ptsComp += 2;
+            if (len_ordenSecuencia[1] === 'cuadrado_verde') ptsComp += 2;
+
+            // Denominación (hasta 6 pts: 2 pts por estímulo)
+            const ptsDenom = Math.min(3, len_denomAciertos) * 2;
+
+            // Repetición (0-3 pts)
+            const ptsRep = parseInt(document.getElementById('len-repeticion-score').value, 10) || 0;
+
+            // Fluencia semántica normalizada (0-5 pts: >=15 animales = 5 pts)
+            const ptsFluencia = Math.min(5, Math.round((len_fluenciaCount / 15) * 5));
+
+            const bruto = ptsComp + ptsDenom + ptsRep + ptsFluencia; // max 18
+            const maximo = 18;
+            const porcentaje = Math.round((bruto / maximo) * 100);
+
+            // Cálculo de severidad inversa (mayor porcentaje = menor severidad afásica)
+            const severidad = porcentaje >= 80 ? 'Lenguaje Funcional / Sin Afasia Significativa'
+                : porcentaje >= 55 ? 'Afasia Leve (Anomia / Disfluencia leve)'
+                : porcentaje >= 30 ? 'Afasia Moderada'
+                : 'Afasia Severa';
+
+            const payload = {
+                fecha: new Date().toISOString(),
+                bruto,
+                maximo,
+                porcentaje,
+                severidad
+            };
+
+            localStorage.setItem(STORAGE_KEYS.LEN, JSON.stringify(payload));
+            mostrarToast(`Evaluación de Lenguaje guardada (${porcentaje}%).`);
+            volverAlInicio();
+        }
+
+        // =========================================================================
+        // MÓDULO SISTEMA DE INTERVENCIÓN TERAPÉUTICA (PREFIJO int_)
+        // =========================================================================
+        let int_gngAciertos = 0;
+        let int_gngErrores = 0;
+        let int_gngObjetivoActual = false;
+        let int_avdPasoEsperado = 1;
+        let int_motEfectivas = 0;
+        let int_motCompensadas = 0;
+        let int_motTimerActivo = false;
+        let int_lenIndex = 0;
+
+        const INT_LENGUAJE_ITEMS = [
+            {
+                emoji: '🔑',
+                palabra: 'Llave',
+                pista1: 'Rasgo Semántico: Objeto metálico pequeño que sirve para abrir cerraduras y puertas.',
+                pista2: 'Clave Fonológica: Comienza con la sílaba "LLA..."'
+            },
+            {
+                emoji: '☂️',
+                palabra: 'Paraguas',
+                pista1: 'Rasgo Semántico: Accesorio plegable con mango que nos protege de la lluvia.',
+                pista2: 'Clave Fonológica: Comienza con la sílaba "PA..."'
+            },
+            {
+                emoji: '✂️',
+                palabra: 'Tijeras',
+                pista1: 'Rasgo Semántico: Herramienta manual con dos hojas afiladas para cortar papel o tela.',
+                pista2: 'Clave Fonológica: Comienza con la sílaba "TI..."'
+            }
+        ];
+
+        function int_abrirAreaDirecta(area) {
+            cambiarVista('vista-intervencion');
+            int_seleccionarTab(area);
+        }
+
+        function int_seleccionarTab(area) {
+            document.querySelectorAll('.int-panel').forEach(p => p.classList.add('hidden'));
+            document.getElementById('int-panel-' + area).classList.remove('hidden');
+
+            document.querySelectorAll('.int-tab-btn').forEach(btn => {
+                btn.classList.remove('bg-petrol', 'text-white', 'shadow-sm');
+                btn.classList.add('bg-white', 'text-slate-700', 'border', 'border-slate-200');
+            });
+            const activeBtn = document.getElementById('int-tab-' + area);
+            activeBtn.classList.add('bg-petrol', 'text-white', 'shadow-sm');
+            activeBtn.classList.remove('bg-white', 'text-slate-700', 'border', 'border-slate-200');
+        }
+
+        function int_registrarActividad(area, detalle) {
+            const actual = JSON.parse(localStorage.getItem(STORAGE_KEYS.INT) || '{"sesiones":[]}');
+            actual.sesiones.push({
+                fecha: new Date().toISOString(),
+                area,
+                detalle
+            });
+            localStorage.setItem(STORAGE_KEYS.INT, JSON.stringify(actual));
+            int_refrescarContadorGlobal();
+        }
+
+        function int_refrescarContadorGlobal() {
+            const actual = JSON.parse(localStorage.getItem(STORAGE_KEYS.INT) || '{"sesiones":[]}');
+            document.getElementById('int-contador-global').textContent = `Sesiones completadas: ${actual.sesiones.length}`;
+        }
+
+        // Intervención Cognitiva
+        function int_iniciarGoNoGoAdaptativo() {
+            int_gngAciertos = 0;
+            int_gngErrores = 0;
+            let rondas = 0;
+            const estEl = document.getElementById('int-cog-estimulo');
+            const statsEl = document.getElementById('int-cog-stats');
+
+            const iv = setInterval(() => {
+                rondas++;
+                if (rondas > 8) {
+                    clearInterval(iv);
+                    estEl.textContent = 'COMPLETADO';
+                    estEl.className = 'text-2xl font-black py-4 text-emerald-400';
+                    int_registrarActividad('Cognitiva', `Go/No-Go Adaptativo (${int_gngAciertos} aciertos)`);
+                    mostrarToast('Ronda cognitiva registrada en el historial.');
+                    return;
+                }
+                int_gngObjetivoActual = Math.random() > 0.4;
+                if (int_gngObjetivoActual) {
+                    estEl.textContent = '● AZUL (GO)';
+                    estEl.className = 'text-3xl font-black py-4 text-cyan-400';
+                } else {
+                    estEl.textContent = '▲ ÁMBAR (NO)';
+                    estEl.className = 'text-3xl font-black py-4 text-amber-400';
+                }
+                statsEl.textContent = `Aciertos: ${int_gngAciertos} | Errores: ${int_gngErrores}`;
+            }, 1400);
+            app_activeIntervals.push(iv);
+        }
+
+        function int_responderGoNoGoAdaptativo() {
+            if (int_gngObjetivoActual) {
+                int_gngAciertos++;
+                int_gngObjetivoActual = false;
+            } else {
+                int_gngErrores++;
+            }
+            document.getElementById('int-cog-stats').textContent = `Aciertos: ${int_gngAciertos} | Errores: ${int_gngErrores}`;
+        }
+
+        function int_validarMemoriaProspectiva() {
+            const val = document.getElementById('int-mem-respuesta').value;
+            if (val === 'ok') {
+                int_registrarActividad('Cognitiva', 'Memoria Prospectiva AVD lograda');
+                mostrarToast('¡Excelente! Consigna prospectiva recordada correctamente.');
+            } else {
+                mostrarToast('Revise el horario y contexto de la consigna.', 'error');
+            }
+        }
+
+        function int_seleccionarPasoAVD(btn, orden) {
+            if (orden === int_avdPasoEsperado) {
+                btn.classList.add('bg-emerald-50', 'border-emerald-400', 'text-emerald-900');
+                btn.disabled = true;
+                int_avdPasoEsperado++;
+                if (int_avdPasoEsperado > 3) {
+                    int_registrarActividad('Cognitiva', 'Secuenciación AVD completada');
+                    mostrarToast('¡Secuencia AVD ordenada con éxito!');
+                }
+            } else {
+                mostrarToast('Ese paso no corresponde al orden lógico siguiente.', 'error');
+            }
+        }
+
+        function int_reiniciarAVD() {
+            int_avdPasoEsperado = 1;
+            document.querySelectorAll('#int-avd-lista button').forEach(b => {
+                b.disabled = false;
+                b.classList.remove('bg-emerald-50', 'border-emerald-400', 'text-emerald-900');
+            });
+        }
+
+        // Intervención Motora
+        function int_toggleTimerMotor() {
+            if (int_motTimerActivo) return;
+            int_motTimerActivo = true;
+            let seg = 45;
+            const el = document.getElementById('int-mot-crono');
+            const iv = setInterval(() => {
+                seg--;
+                el.textContent = `00:${seg < 10 ? '0' + seg : seg}`;
+                if (seg <= 0) {
+                    clearInterval(iv);
+                    int_motTimerActivo = false;
+                    el.textContent = '00:45';
+                    mostrarToast('Serie motora de 45s finalizada.');
+                }
+            }, 1000);
+            app_activeIntervals.push(iv);
+        }
+
+        function int_registrarRepeticion(tipo) {
+            if (tipo === 'efectiva') {
+                int_motEfectivas++;
+                document.getElementById('int-mot-efectivas').textContent = int_motEfectivas;
+            } else {
+                int_motCompensadas++;
+                document.getElementById('int-mot-compensadas').textContent = int_motCompensadas;
+            }
+        }
+
+        function int_guardarSesionMotora() {
+            const nivel = document.getElementById('int-mot-nivel').value;
+            int_registrarActividad('Motora', `${nivel} — Efectivas: ${int_motEfectivas}, Compensadas: ${int_motCompensadas}`);
+            int_motEfectivas = 0;
+            int_motCompensadas = 0;
+            document.getElementById('int-mot-efectivas').textContent = '0';
+            document.getElementById('int-mot-compensadas').textContent = '0';
+            mostrarToast('Serie motora guardada en el historial terapéutico.');
+        }
+
+        // Intervención Lenguaje
+        function int_renderEstímuloLenguaje() {
+            const item = INT_LENGUAJE_ITEMS[int_lenIndex];
+            document.getElementById('int-len-item-idx').textContent = `Estímulo ${int_lenIndex + 1} / ${INT_LENGUAJE_ITEMS.length}`;
+            document.getElementById('int-len-emoji').textContent = item.emoji;
+            document.getElementById('int-len-pista-box').textContent = 'Sin pista activa. Intente nombrar el objeto.';
+        }
+
+        function int_mostrarPistaLenguaje(nivel) {
+            const item = INT_LENGUAJE_ITEMS[int_lenIndex];
+            const box = document.getElementById('int-len-pista-box');
+            if (nivel === 1) {
+                box.textContent = item.pista1;
+            } else if (nivel === 2) {
+                box.textContent = item.pista2;
+            } else {
+                box.textContent = `Modelo Auditivo: "${item.palabra}"`;
+                len_hablarTexto(item.palabra);
+            }
+        }
+
+        function int_completarItemLenguaje() {
+            const item = INT_LENGUAJE_ITEMS[int_lenIndex];
+            int_registrarActividad('Lenguaje', `Denominación asistida lograda: ${item.palabra}`);
+            int_lenIndex = (int_lenIndex + 1) % INT_LENGUAJE_ITEMS.length;
+            int_renderEstímuloLenguaje();
+            mostrarToast(`Estímulo "${item.palabra}" registrado. Avanzando al siguiente.`);
+        }
+    </script>
+</body>
+</html>
